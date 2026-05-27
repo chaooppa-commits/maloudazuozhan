@@ -20,7 +20,7 @@
     <div class="start-section">
       <div class="config-group">
         <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12" oninput="onUsernameInput()">
-        <input type="text" class="seed-input" id="pincode-input" placeholder="4位密码" maxlength="4" inputmode="numeric" style="margin-top:16px">
+        <input type="text" class="seed-input" id="pincode-input" placeholder="4位密码" maxlength="4" inputmode="numeric" oninput="onPincodeInput()" style="margin-top:16px">
         <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
         <div class="pincode-hint" id="pincode-hint"></div>
       </div>
@@ -251,6 +251,7 @@
     let _walletBalance = null;  // null = 未验证；数字 = 已验证余额
     let _authState = 'idle';    // 'idle'|'checking'|'needs_pin'|'needs_register'|'verified'
     let _usernameDebounce = null;
+    let _usernameTimer = null;
     let selectedBuyin = 50;
 
     function selectBuyin(amount, btn) {
@@ -286,10 +287,19 @@
       }
     }
 
+    // ─── 核心：自动验证身份并获取荷包 ──────────────────────────────────────
+
+    function autoValidateIdentity(username, pincode) {
+      if (!username || !pincode || pincode.length !== 4) return;
+      setHint('正在验证身份…', 'info');
+      doGetWallet(username, pincode, null);
+    }
+
     // ─── 步骤1：输入昵称 → 防抖查询 checkUsername ──────────────────────────
 
     function onUsernameInput() {
       const username = document.getElementById('username-input').value.trim();
+      const pincode  = document.getElementById('pincode-input').value.trim();
       localStorage.setItem('doukou_username', username);
 
       _authState = 'idle';
@@ -298,11 +308,38 @@
       setHint('', '');
 
       clearTimeout(_usernameDebounce);
+      clearTimeout(_usernameTimer);
       if (!username) return;
+
+      // 名字+密码都齐了，直接验证
+      if (pincode.length === 4) {
+        autoValidateIdentity(username, pincode);
+        return;
+      }
 
       _authState = 'checking';
       setHint('查询中…', 'info');
-      _usernameDebounce = setTimeout(() => doCheckUsername(username), 600);
+      _usernameTimer = setTimeout(() => doCheckUsername(username), 800);
+    }
+
+    // ─── 密码框输入事件 ───────────────────────────────────────────────────
+
+    function onPincodeInput() {
+      const username = document.getElementById('username-input').value.trim();
+      const pincode  = document.getElementById('pincode-input').value.trim();
+      localStorage.setItem('doukou_pincode', pincode);
+
+      if (pincode.length === 4 && /^\d+$/.test(pincode)) {
+        if (username) {
+          autoValidateIdentity(username, pincode);
+        }
+      } else {
+        if (_authState === 'verified') _authState = 'needs_pin';
+        if (pincode.length > 0 && !/^\d+$/.test(pincode)) {
+          setHint('密码必须为4位纯数字', 'err');
+        }
+        updateWalletDisplay();
+      }
     }
 
     function doCheckUsername(username) {
@@ -315,6 +352,9 @@
           if (data.status === 'exists') {
             _authState = 'needs_pin';
             setHint('已有帐号，请输入密码验证', 'info');
+            // 密码框已有合规密码则直接验证
+            const pincode = document.getElementById('pincode-input').value.trim();
+            if (pincode.length === 4) autoValidateIdentity(username, pincode);
           } else {
             _authState = 'needs_register';
             setHint('新用户，请设置4位密码', 'info');
@@ -415,17 +455,21 @@
     }
 
     function _launchGame(username, pincode) {
+      // 入场金额：不超过荷包余额，优先用荷包余额作为带入上限
+      const walletBal = (_walletBalance !== null && _walletBalance > 0) ? _walletBalance : selectedBuyin;
+      const buyin = Math.min(selectedBuyin, walletBal);
+
       game._username     = username;
       game._pincode      = pincode;
-      game._buyin        = selectedBuyin;
-      game._walletBefore = _walletBalance !== null ? _walletBalance : selectedBuyin;
+      game._buyin        = buyin;
+      game._walletBefore = walletBal;
 
       _prevRoundData = null;
       _lastRoundData = null;
       document.getElementById('review-overlay').classList.remove('show');
       shadowReset();
       const seedStr = document.getElementById('seed-input').value.trim();
-      startGame(selectedMode === 'kelly', seedStr, selectedBuyin);
+      startGame(selectedMode === 'kelly', seedStr, buyin);
       updatePnlLabels('pnl-labels');
     }
 
@@ -433,12 +477,16 @@
 
     function backToStart() {
       showScreen('start-screen');
-      // 路径C：如果 localStorage 有缓存，直接自动验证
-      const savedName = localStorage.getItem('doukou_username');
-      const savedPin  = localStorage.getItem('doukou_pincode');
-      if (savedName && savedPin) {
+      const uInput = document.getElementById('username-input');
+      const pInput = document.getElementById('pincode-input');
+      // 优先用游戏内缓存的账密（再战场景）
+      const name = (game._username) || localStorage.getItem('doukou_username') || '';
+      const pin  = (game._pincode)  || localStorage.getItem('doukou_pincode')  || '';
+      uInput.value = name;
+      pInput.value = pin;
+      if (name && pin) {
         _authState = 'needs_pin';
-        doGetWallet(savedName, savedPin, null);
+        autoValidateIdentity(name, pin);
       } else {
         _authState = 'idle';
         _walletBalance = null;
@@ -449,15 +497,23 @@
     // ─── 页面初始化 ──────────────────────────────────────────────────────────
 
     function initUsername() {
+      const uInput = document.getElementById('username-input');
+      const pInput = document.getElementById('pincode-input');
+      // 强制清空（防止浏览器自动填充旧数据）
+      uInput.value = '';
+      pInput.value = '';
+      _walletBalance = null;
+      _authState = 'idle';
+      updateWalletDisplay();
+      // 从 localStorage 恢复
       const savedName = localStorage.getItem('doukou_username');
       const savedPin  = localStorage.getItem('doukou_pincode');
-      if (savedName) document.getElementById('username-input').value = savedName;
-      if (savedPin)  document.getElementById('pincode-input').value  = savedPin;
-      updateWalletDisplay();
-      // 自动验证缓存的昵称+密码
+      if (savedName) uInput.value = savedName;
+      if (savedPin)  pInput.value = savedPin;
+      // 名字和密码都有，自动验证
       if (savedName && savedPin) {
         _authState = 'needs_pin';
-        doGetWallet(savedName, savedPin, null);
+        autoValidateIdentity(savedName, savedPin);
       } else if (savedName) {
         doCheckUsername(savedName);
       }
