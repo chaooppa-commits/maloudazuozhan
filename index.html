@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>马喽大作战</title>
   <link rel="stylesheet" href="css/style.css">
@@ -279,8 +280,9 @@
         document.getElementById('wallet-display').style.visibility = 'hidden';
       }
       if (startBtn) {
-        startBtn.disabled = (_authState !== 'verified');
-        startBtn.style.opacity = (_authState !== 'verified') ? '0.4' : '';
+        const btnActive = (_authState === 'verified' || _authState === 'needs_register' || _authState === 'needs_pin');
+        startBtn.disabled = !btnActive;
+        startBtn.style.opacity = !btnActive ? '0.4' : '';
       }
     }
 
