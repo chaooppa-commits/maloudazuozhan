@@ -16,7 +16,7 @@ const PLAYERS = ['Boss', 'A', 'B', 'C'];
 const STAKE_OPTIONS = [4, 8, 12, 16];
 
 // Google Sheets 后端地址
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxWKEvxj-caDu5ttf2hDHasiHneFhZlmxStoxMzEe7i2uFWatR9-aGz6wzPcKLFjZy1_Q/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxhlJ0AnZwUOlIxGEYoQyrZCGW_zJ8axOnmh_8_A5lLqjtdIV6JF08cWgJtCbPH-Pte/exec';
 
 // ═══════════════════════════════════════════════════════
 // Google Sheets 上报
