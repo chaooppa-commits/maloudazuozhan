@@ -305,13 +305,15 @@
 
     function doCheckUsername(username) {
       fetch(SHEETS_URL + '?action=checkUsername&username=' + encodeURIComponent(username))
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(data => {
           if (data.status === 'exists') {
             _authState = 'needs_pin';
             setHint('已有帐号，请输入密码验证', 'info');
           } else {
-            // status === 'new'
             _authState = 'needs_register';
             setHint('新用户，请设置4位密码', 'info');
           }
@@ -319,7 +321,7 @@
         })
         .catch(() => {
           _authState = 'idle';
-          setHint('网络异常，请重试', 'err');
+          setHint('查询失败（请检查GAS授权是否完成）', 'err');
           updateWalletDisplay();
         });
     }
@@ -329,15 +331,19 @@
     function doRegister(username, pincode) {
       setHint('注册中…', 'info');
       fetch(SHEETS_URL + '?action=register&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(data => {
           if (data.status === 'ok') {
-            _walletBalance = data.balance;  // 300
+            _walletBalance = data.balance;
             _authState = 'verified';
             localStorage.setItem('doukou_username', username);
             localStorage.setItem('doukou_pincode',  pincode);
             setHint('注册成功！获得 ' + data.balance + ' 筹码', 'ok');
             updateWalletDisplay();
+            _launchGame(username, pincode);
           } else if (data.status === 'duplicate') {
             _authState = 'needs_pin';
             setHint('昵称已被注册，请直接登录', 'err');
@@ -346,7 +352,7 @@
             setHint('注册失败：' + (data.message || ''), 'err');
           }
         })
-        .catch(() => setHint('网络异常，请重试', 'err'));
+        .catch(() => setHint('注册失败（请检查GAS授权是否完成）', 'err'));
     }
 
     // ─── 登录 / 返回起始页查询荷包 ─────────────────────────────────────────
@@ -354,7 +360,10 @@
     function doGetWallet(username, pincode, callback) {
       setHint('验证中…', 'info');
       fetch(SHEETS_URL + '?action=getWallet&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(data => {
           if (data.status === 'ok') {
             _walletBalance = data.balance;
@@ -376,7 +385,7 @@
         })
         .catch(() => {
           _authState = 'idle';
-          setHint('网络异常，请重试', 'err');
+          setHint('登录失败（请检查GAS授权是否完成）', 'err');
           updateWalletDisplay();
         });
     }
