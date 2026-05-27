@@ -78,6 +78,19 @@ function reportToSheets() {
     sessionNo:     sessionNo
   });
 
+  // ═══ 【测试沙盒】拦截，不上报真实数据 ═══
+  if (window.IS_TEST_MODE) {
+    console.log('[沙盒模拟上报] 数据包：', {
+      用户: username,
+      最终筹码: game.obsPurse,
+      理性局: game.stats.rationalCnt,
+      冒进局: game.stats.aggressCnt,
+      保守局: game.stats.conservCnt
+    });
+    return;
+  }
+  // ═══════════════════════════════════════
+
   fetch(SHEETS_URL + '?' + params.toString())
     .then(r => r.json())
     .then(data => {
