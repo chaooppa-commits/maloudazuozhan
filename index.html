@@ -315,7 +315,7 @@
         _authState = 'verified';
         _walletBalance = 300;
         document.getElementById('pincode-input').value = '0000';
-        updateWalletDisplay();
+        updateWalletDisplay();  // 刷新按钮可点击状态
         setHint('【沙盒测试模式】已激活！300筹码已就绪', 'ok');
         return;
       }
@@ -350,6 +350,9 @@
       localStorage.setItem('doukou_pincode', pincode);
 
       if (pincode.length === 4 && /^\d+$/.test(pincode)) {
+        // 密码已满，立即掐断昵称防抖，全速发请求
+        clearTimeout(_usernameDebounce);
+        clearTimeout(_usernameTimer);
         if (username) {
           autoValidateIdentity(username, pincode);
         }
@@ -369,15 +372,21 @@
           return r.json();
         })
         .then(data => {
+          const pInput = document.getElementById('pincode-input');
           if (data.status === 'exists') {
             _authState = 'needs_pin';
             setHint('已有帐号，请输入密码验证', 'info');
-            // 密码框已有合规密码则直接验证
-            const pincode = document.getElementById('pincode-input').value.trim();
-            if (pincode.length === 4) autoValidateIdentity(username, pincode);
+            // 密码框已有合规密码则直接验证，否则自动聚焦到密码框
+            const pincode = pInput.value.trim();
+            if (pincode.length === 4) {
+              autoValidateIdentity(username, pincode);
+            } else {
+              pInput.focus();
+            }
           } else {
             _authState = 'needs_register';
             setHint('新用户，请设置4位密码', 'info');
+            pInput.focus(); // 自动聚焦，唤起数字键盘
           }
           updateWalletDisplay();
         })
@@ -499,13 +508,20 @@
       showScreen('start-screen');
       const uInput = document.getElementById('username-input');
       const pInput = document.getElementById('pincode-input');
-      // 优先用游戏内缓存的账密（再战场景）
       const name = (game._username) || localStorage.getItem('doukou_username') || '';
       const pin  = (game._pincode)  || localStorage.getItem('doukou_pincode')  || '';
       uInput.value = name;
       pInput.value = pin;
       if (name && pin) {
-        _authState = 'needs_pin';
+        // 先斩后奏：用刚结束的本场结算余额立即显示，按钮瞬间可点
+        if (game._walletAfter != null) {
+          _walletBalance = game._walletAfter;
+          _authState = 'verified';
+          updateWalletDisplay();
+        } else {
+          _authState = 'needs_pin';
+        }
+        // 后台静默同步最新云端余额，完成后悄悄刷新数字
         autoValidateIdentity(name, pin);
       } else {
         _authState = 'idle';
