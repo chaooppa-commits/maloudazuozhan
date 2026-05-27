@@ -610,19 +610,29 @@
     }
 
     /**
-     * 计算某手牌对应的已出福星卡数量（在可见牌中）
-     * 当已出 >= 2 张时，tier 需要 -1
+     * 计算某手牌对应的福星卡消耗档位降幅（已出现在可见牌中）
+     *
+     * 规则：
+     *  - 牌值 1：共 8 张，每消耗 2 张算 1 个"降档单位"（即需消耗 4 张才降 1 档）
+     *  - 其他牌：共 4 张，消耗 2 张即降 1 档（原规则不变）
+     *
+     * 返回值：最大档位降幅整数（0 = 不降档，1 = 降 1 档，...）
      */
     function countUsedBlessings(a, b, allVisible) {
       const bless = blessingCards(a, b, []);  // 获取该组合的全部福星卡属性
-      let maxUsed = 0;
+      let maxTierDrop = 0;
       for (const bl of bless) {
         const x = bl.value;
         const total = CARD_COUNTS[x] || 0;
         const used = allVisible.filter(c => c === x).length;
-        if (used > maxUsed) maxUsed = used;
+        // 阈值：每 (total/4) 张消耗算 1 个降档单位
+        // 牌值1：total=8，threshold=2，需消耗 4 张（= 2个单位）才降1档
+        // 其他：total=4，threshold=1，消耗 2 张即降1档
+        const unitSize = total / 4;          // 1张"标准单位"等于多少实际张数
+        const tierDrop = Math.floor(used / (unitSize * 2));  // 每2个标准单位降1档
+        if (tierDrop > maxTierDrop) maxTierDrop = tierDrop;
       }
-      return maxUsed;
+      return maxTierDrop;
     }
 
     /**
@@ -643,8 +653,8 @@
       const bossInfo = lookupTier(hands[0][0], hands[0][1]);
       let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
       const bossPower = bossInfo ? (bossInfo.mp || bossInfo.p_eq) : 40;
-      const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
-      if (bossUsed >= 2) bossTier = Math.max(1, bossTier - 1);
+      const bossTierDrop = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
+      if (bossTierDrop >= 1) bossTier = Math.max(1, bossTier - bossTierDrop);
 
       // 步骤1：按战力绝对值选目标（选与庄家差最大的员工）
       let bestTarget = null;
@@ -656,8 +666,8 @@
         const empInfo = lookupTier(hands[i][0], hands[i][1]);
         let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
         const empPower = empInfo ? (empInfo.mp || empInfo.p_eq) : 40;
-        const empUsed = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
-        if (empUsed >= 2) empTier = Math.max(1, empTier - 1);
+        const empTierDrop = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
+        if (empTierDrop >= 1) empTier = Math.max(1, empTier - empTierDrop);
 
         const powerGap = empPower - bossPower;
         if (powerGap > bestPowerGap) {
