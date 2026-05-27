@@ -70,9 +70,9 @@ function reportToSheets() {
     roi:         roi,
     totalStaked: totalStaked,
     avgStake:    avgStake,
-    rationalCnt: 0,   // 暂未统计
-    aggressCnt:  0,
-    conservCnt:  0,
+    rationalCnt: game.stats.rationalCnt,
+    aggressCnt:  game.stats.aggressCnt,
+    conservCnt:  game.stats.conservCnt,
     shadowWinRate: shadowWinRate,
     shadowRoi:     shadowRoi,
     sessionNo:     sessionNo
@@ -199,7 +199,10 @@ function startGame(kellyMode, seedStr, buyin) {
     skip: 0, bet: 0, win: 0, lose: 0, totalStaked: 0,
     betTargetCount: { A: 0, B: 0, C: 0 },
     stakeCount: {},
-    flatEat: { obs: 0, A: 0, B: 0, C: 0 }
+    flatEat: { obs: 0, A: 0, B: 0, C: 0 },
+    rationalCnt: 0,
+    aggressCnt:  0,
+    conservCnt:  0
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -303,6 +306,11 @@ function placeBet(target, amount) {
   
     // Evaluate action
     const actionEval = evaluateAction(game.hands, game.currentBet.target, game.currentBet.amount);
+    
+      // 累计理性/冒进/保守计数
+      if (actionEval.tag === '理性') game.stats.rationalCnt++;
+      else if (actionEval.tag === '冒进') game.stats.aggressCnt++;
+      else if (actionEval.tag === '保守') game.stats.conservCnt++;
   
     // Log round
     pushLog({
