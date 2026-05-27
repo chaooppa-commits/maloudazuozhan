@@ -33,7 +33,10 @@ function reportToSheets() {
   const wins        = game.stats.win;
   const totalStaked = game.stats.totalStaked;
   const netPnl      = game.obsPurse - buyin;
-  const newWallet   = game.obsPurse;
+  // 新荷包 = 入场前云端总荷包 + 本场净盈亏（而非仅本场结束筹码）
+  const cloudWallet = game._walletBefore || buyin;
+  const newWallet   = cloudWallet + netPnl;
+  game._walletAfter = newWallet; // 供 backToStart 先斩后奏使用
 
   const actionRate = totalRounds > 0 ? +(betRounds / totalRounds * 100).toFixed(1) : 0;
   const winRate    = betRounds   > 0 ? +(wins      / betRounds   * 100).toFixed(1) : 0;
@@ -82,7 +85,10 @@ function reportToSheets() {
   if (window.IS_TEST_MODE) {
     console.log('[沙盒模拟上报] 数据包：', {
       用户: username,
-      最终筹码: game.obsPurse,
+      云端原荷包: cloudWallet,
+      本场带入: buyin,
+      本场盈亏: netPnl,
+      模拟新荷包: newWallet,
       理性局: game.stats.rationalCnt,
       冒进局: game.stats.aggressCnt,
       保守局: game.stats.conservCnt
