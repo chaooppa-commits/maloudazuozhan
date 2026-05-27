@@ -290,6 +290,13 @@
     // ─── 核心：自动验证身份并获取荷包 ──────────────────────────────────────
 
     function autoValidateIdentity(username, pincode) {
+      // 【测试沙盒】拦截，不发网络请求
+      if (window.IS_TEST_MODE) {
+        _authState = 'verified';
+        _walletBalance = 300;
+        updateWalletDisplay();
+        return;
+      }
       if (!username || !pincode || pincode.length !== 4) return;
       setHint('正在验证身份…', 'info');
       doGetWallet(username, pincode, null);
@@ -301,6 +308,19 @@
       const username = document.getElementById('username-input').value.trim();
       const pincode  = document.getElementById('pincode-input').value.trim();
       localStorage.setItem('doukou_username', username);
+
+      // ═══ 【测试沙盒彩蛋】特殊昵称 debug 拦截 ═══
+      if (username.toLowerCase() === 'debug') {
+        window.IS_TEST_MODE = true;
+        _authState = 'verified';
+        _walletBalance = 300;
+        document.getElementById('pincode-input').value = '0000';
+        updateWalletDisplay();
+        setHint('【沙盒测试模式】已激活！300筹码已就绪', 'ok');
+        return;
+      }
+      window.IS_TEST_MODE = false;
+      // ═══════════════════════════════════════════
 
       _authState = 'idle';
       _walletBalance = null;
