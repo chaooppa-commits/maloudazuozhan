@@ -153,6 +153,7 @@ html, body {
   color: var(--text-dim);
   opacity: 0.8;
   min-height: 1em;
+  transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 /* 开始页三分区 */
 .start-section {
