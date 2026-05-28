@@ -258,6 +258,12 @@ function nextRound() {
 function placeBet(target, amount) {
   if (game.phase !== 'betting') return;
 
+  // 🛡️ 防御：hands 未初始化时安全回退
+  if (!game.hands || game.hands.length < 4) {
+    console.error('[placeBet] game.hands not ready, aborting bet');
+    return;
+  }
+
   if (target === 'SKIP') {
     game.currentBet = { target: 'SKIP', amount: 0 };
     game.stats.skip++;
