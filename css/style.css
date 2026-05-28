@@ -216,7 +216,8 @@ html, body {
   cursor: not-allowed;
   pointer-events: none;
 }
-.start-btn.disabled {
+.start-btn.disabled,
+.start-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
   pointer-events: none;
