@@ -229,44 +229,48 @@
     // ═══════════════════════════════════════════════════════
     // Haptic + Audio Feedback (iOS-safe)
     // ═══════════════════════════════════════════════════════
-    let _audioCtx = null;
-    let _clickBuf = null;
+
+    // 全局创建唯一的音频对象（预加载，不消耗多少流量）
+    const _tapAudio = new Audio('https://xu-chao.github.io/mp3/tap.mp3');
+    _tapAudio.preload = 'auto';
+    _tapAudio.volume = 0.4;
 
     function tap() {
       // Vibrate (Android only, iOS ignores)
       if (navigator.vibrate) navigator.vibrate(10);
-      // Play click sound via AudioContext (iOS-safe, lowest latency)
-      if (_audioCtx && _clickBuf) {
-        try {
-          const src = _audioCtx.createBufferSource();
-          src.buffer = _clickBuf;
-          src.connect(_audioCtx.destination);
-          src.start(0);
-        } catch(e) {}
-      }
-    }
-
-    // Init audio on first user gesture (iOS requires user gesture to unlock)
-    function initAudio() {
-      if (_audioCtx) return;
       try {
-        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        fetch('yinxiao/dianji.wav')
-          .then(r => r.arrayBuffer())
-          .then(buf => _audioCtx.decodeAudioData(buf))
-          .then(decoded => { _clickBuf = decoded; })
-          .catch(() => {});
-      } catch(e) {}
+        // 每次播放前重置进度到开头，防止连续快速点击时声音被截断
+        _tapAudio.currentTime = 0;
+        // 使用 Promise 播放，捕获并处理可能的拦截错误
+        const playPromise = _tapAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log("音频播放被浏览器拦截，等待用户交互解锁:", error);
+          });
+        }
+      } catch(e) {
+        console.error("音频播放异常:", e);
+      }
     }
 
-    // Unlock AudioContext on first tap (iOS Safari requirement)
-    document.addEventListener('click', function unlockAudio() {
-      initAudio();
-      if (_audioCtx && _audioCtx.state === 'suspended') {
-        _audioCtx.resume();
-      }
-      document.removeEventListener('click', unlockAudio);
-    }, { once: true });
+    // 移动端无感解锁音频源
+    function _unlockAudio() {
+      _tapAudio.play().then(() => {
+        // 激活成功后，立刻暂停并重置，用户完全听不到声音，但音频通道已经对该网页终身放行
+        _tapAudio.pause();
+        _tapAudio.currentTime = 0;
+        // 解锁成功后移除事件监听，不留垃圾内存
+        document.removeEventListener('click', _unlockAudio);
+        document.removeEventListener('touchstart', _unlockAudio);
+        console.log("【音频通道】已成功无感解锁！");
+      }).catch(() => {
+        // 如果还没交互就触发了，静默等待下一次
+      });
+    }
+    // 监听用户的第一次点击或触摸操作
+    document.addEventListener('click', _unlockAudio);
+    document.addEventListener('touchstart', _unlockAudio);
+
 
     // ═══════════════════════════════════════════════════════
     // 身份验证（登录/注册分离，无防抖状态机）
@@ -286,21 +290,35 @@
     // ─── Tab 切换 ────────────────────────────────────────────────────────
 
     function switchAuthTab(tab) {
-      // tab = 'login' | 'register'
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-      if (tab === 'login') {
-        document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
-        document.getElementById('login-panel').classList.add('active');
-      } else {
-        document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
-        document.getElementById('register-panel').classList.add('active');
+      // 1. 如果当前已是验证成功状态，用户主动切 Tab 意味着想换身份，打回原形
+      if (_authState === 'verified') {
+        _authState = 'idle';
+        _walletBalance = null;
+        updateWalletDisplay();
       }
-      // 清空提示
-      document.getElementById('pincode-hint').textContent = '';
-      document.getElementById('pincode-hint').className = 'pincode-hint';
-      const regHint = document.getElementById('reg-hint');
-      if (regHint) { regHint.textContent = ''; regHint.className = 'pincode-hint'; }
+
+      // 2. 丝滑细节：切 Tab 时，自动把上一个 Tab 填好的昵称同步过去，省得用户重打
+      const loginName = document.getElementById('username-input').value.trim();
+      const regName   = document.getElementById('reg-username-input').value.trim();
+      if (tab === 'register' && loginName && !regName) {
+        document.getElementById('reg-username-input').value = loginName;
+      } else if (tab === 'login' && regName && !loginName) {
+        document.getElementById('username-input').value = regName;
+      }
+
+      // 3. UI 显隐切换
+      document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'login') {
+        document.querySelector('.auth-tab[onclick*="login"]').classList.add('active');
+        document.getElementById('login-panel').classList.add('active');
+        setHint('请证明你是你自己', 'info');
+      } else {
+        document.querySelector('.auth-tab[onclick*="register"]').classList.add('active');
+        document.getElementById('register-panel').classList.add('active');
+        setHint('设定一个4位暗号，初始荷包 $300', 'info');
+      }
     }
 
     // ─── 辅助：UI 反馈 ───────────────────────────────────────────────────────
@@ -332,6 +350,8 @@
 
     function doLogin() {
       tap();
+      // 防止重复点击
+      if (_authState === 'checking') return;
       const username = document.getElementById('username-input').value.trim();
       const pincode  = document.getElementById('pincode-input').value.trim();
 
@@ -350,14 +370,21 @@
 
       if (!username) { setHint('请输入昵称', 'err'); return; }
       if (!pincode || pincode.length !== 4) { setHint('请输入4位密码', 'err'); return; }
+
+      // 锁定状态 + 禁用按钮
+      _authState = 'checking';
+      const loginBtn = document.querySelector('#login-panel .start-btn');
+      if (loginBtn) loginBtn.disabled = true;
       setHint('验证中…', 'info');
-      doGetWallet(username, pincode, () => _launchGame(username, pincode));
+      doGetWallet(username, pincode, () => _launchGame(username, pincode), loginBtn);
     }
 
     // ─── 注册流程 ──────────────────────────────────────────────────────────
 
     function doRegisterAndLaunch() {
       tap();
+      // 防止重复点击
+      if (_authState === 'checking') return;
       const username = document.getElementById('reg-username-input').value.trim();
       const pincode  = document.getElementById('reg-pincode-input').value.trim();
       const confirm  = document.getElementById('reg-pincode-confirm').value.trim();
@@ -366,13 +393,19 @@
       if (!pincode || pincode.length !== 4) { setHint('请设置4位密码', 'err'); return; }
       if (pincode !== confirm) { setHint('两次密码不一致', 'err'); return; }
 
+      // 锁定状态 + 禁用按钮
+      _authState = 'checking';
+      const regBtn = document.querySelector('#register-panel .start-btn');
+      if (regBtn) regBtn.disabled = true;
       setHint('注册中…', 'info');
+
       fetch(SHEETS_URL + '?action=register&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
         .then(r => {
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.json();
         })
         .then(data => {
+          if (regBtn) regBtn.disabled = false;
           if (window.IS_GAMING) return;
           if (data.status === 'ok') {
             _walletBalance = data.balance;
@@ -386,20 +419,27 @@
             document.getElementById('pincode-input').value = pincode;
             _launchGame(username, pincode);
           } else if (data.status === 'duplicate') {
+            _authState = 'idle';
             setHint('昵称已被注册，请换一个或直接登录', 'err');
+            updateWalletDisplay();
           } else {
+            _authState = 'idle';
             setHint('注册失败：' + (data.message || ''), 'err');
+            updateWalletDisplay();
           }
         })
         .catch(() => {
+          if (regBtn) regBtn.disabled = false;
           if (window.IS_GAMING) return;
+          _authState = 'idle';
           setHint('注册失败（请检查网络）', 'err');
+          updateWalletDisplay();
         });
     }
 
     // ─── 登录：验证密码并获取荷包 ──────────────────────────────────────────
 
-    function doGetWallet(username, pincode, callback) {
+    function doGetWallet(username, pincode, callback, btnEl) {
       setHint('验证中…', 'info');
       fetch(SHEETS_URL + '?action=getWallet&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
         .then(r => {
@@ -407,6 +447,7 @@
           return r.json();
         })
         .then(data => {
+          if (btnEl) btnEl.disabled = false;
           if (window.IS_GAMING) return;
           if (data.status === 'ok') {
             _walletBalance = data.balance;
@@ -427,6 +468,7 @@
           }
         })
         .catch(() => {
+          if (btnEl) btnEl.disabled = false;
           if (window.IS_GAMING) return;
           _authState = 'idle';
           setHint('网络连接失败，请重试', 'err');
