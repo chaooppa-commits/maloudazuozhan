@@ -15,47 +15,71 @@
   <div id="start-screen">
     <h1>马喽大作战</h1>
     <p class="subtitle">马喽的皮鞭准备好了吗？</p>
-      
-    <!-- 区块1：用户身份 -->
-    <div class="start-section">
-      <div class="config-group">
-        <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12" oninput="onUsernameInput()">
-        <input type="text" class="seed-input" id="pincode-input" placeholder="4位密码" maxlength="4" inputmode="numeric" oninput="onPincodeInput()" style="margin-top:16px">
-        <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
-        <div class="pincode-hint" id="pincode-hint"></div>
-      </div>
+
+    <!-- 登录/注册 Tab 切换 -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
     </div>
-      
-    <!-- 区块2：对战设定 -->
-    <div class="start-section">
-      <div class="config-group" id="buyin-group">
-        <label>入场金额</label>
-        <div class="mode-toggle">
-          <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
-          <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
-          <button class="mode-btn" data-buyin="200" onclick="selectBuyin(200, this)">$200</button>
+
+    <!-- ═══ 登录面板 ═══ -->
+    <div class="auth-panel active" id="login-panel">
+      <div class="start-section">
+        <div class="config-group">
+          <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12">
+          <input type="text" class="seed-input" id="pincode-input" placeholder="4位密码" maxlength="4" inputmode="numeric" style="margin-top:16px">
+          <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
+          <div class="pincode-hint" id="pincode-hint"></div>
         </div>
       </div>
-      <div class="config-group">
-        <label>如何伺候老板？</label>
-        <div class="mode-toggle">
-          <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
-            亲手服侍
-            <div class="mode-desc">4/8/12/16</div>
-          </button>
-          <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
-            懒得动手
-            <div class="mode-desc">1/2 Kelly</div>
-          </button>
+
+      <!-- 对战设定 -->
+      <div class="start-section">
+        <div class="config-group" id="buyin-group">
+          <label>入场金额</label>
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
+            <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
+            <button class="mode-btn" data-buyin="200" onclick="selectBuyin(200, this)">$200</button>
+          </div>
+        </div>
+        <div class="config-group">
+          <label>如何伺候老板？</label>
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
+              亲手服侍
+              <div class="mode-desc">4/8/12/16</div>
+            </button>
+            <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
+              懒得动手
+              <div class="mode-desc">1/2 Kelly</div>
+            </button>
+          </div>
         </div>
       </div>
+
+      <input type="hidden" id="seed-input" value="">
+
+      <div class="start-section">
+        <button class="start-btn" onclick="doLogin()">老板来快活</button>
+      </div>
     </div>
-    
-    <input type="hidden" id="seed-input" value="">
-    
-    <!-- 区块3：进入按钮 -->
-    <div class="start-section">
-      <button class="start-btn" onclick="onStart()">老板来快活</button>
+
+    <!-- ═══ 注册面板 ═══ -->
+    <div class="auth-panel" id="register-panel">
+      <div class="start-section">
+        <div class="config-group">
+          <input type="text" class="seed-input" id="reg-username-input" placeholder="你的昵称" maxlength="12">
+          <input type="text" class="seed-input" id="reg-pincode-input" placeholder="设置4位密码" maxlength="4" inputmode="numeric" style="margin-top:16px">
+          <input type="text" class="seed-input" id="reg-pincode-confirm" placeholder="确认密码" maxlength="4" inputmode="numeric" style="margin-top:16px">
+          <div class="reg-balance">初始荷包：$300</div>
+          <div class="pincode-hint" id="reg-hint"></div>
+        </div>
+      </div>
+
+      <div class="start-section">
+        <button class="start-btn" onclick="doRegisterAndLaunch()">注册并开局</button>
+      </div>
     </div>
   </div>
 
@@ -245,13 +269,11 @@
     }, { once: true });
 
     // ═══════════════════════════════════════════════════════
-    // 身份状态机（SHEETS_URL 已在 app-v3.js 中定义）
+    // 身份验证（登录/注册分离，无防抖状态机）
     // ═══════════════════════════════════════════════════════
 
     let _walletBalance = null;  // null = 未验证；数字 = 已验证余额
-    let _authState = 'idle';    // 'idle'|'checking'|'needs_pin'|'needs_register'|'verified'
-    let _usernameDebounce = null;
-    let _usernameTimer = null;
+    let _authState = 'idle';    // 'idle' | 'verified'
     let selectedBuyin = 50;
 
     function selectBuyin(amount, btn) {
@@ -261,18 +283,42 @@
       btn.classList.add('active');
     }
 
+    // ─── Tab 切换 ────────────────────────────────────────────────────────
+
+    function switchAuthTab(tab) {
+      // tab = 'login' | 'register'
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+      if (tab === 'login') {
+        document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
+        document.getElementById('login-panel').classList.add('active');
+      } else {
+        document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
+        document.getElementById('register-panel').classList.add('active');
+      }
+      // 清空提示
+      document.getElementById('pincode-hint').textContent = '';
+      document.getElementById('pincode-hint').className = 'pincode-hint';
+      const regHint = document.getElementById('reg-hint');
+      if (regHint) { regHint.textContent = ''; regHint.className = 'pincode-hint'; }
+    }
+
     // ─── 辅助：UI 反馈 ───────────────────────────────────────────────────────
 
     function setHint(msg, type) {
       // type: '' | 'ok' | 'err' | 'info'
-      const el = document.getElementById('pincode-hint');
-      el.textContent = msg;
-      el.className = 'pincode-hint' + (type ? ' hint-' + type : '');
+      // 写入当前可见面板的 hint
+      const loginPanel = document.getElementById('login-panel');
+      const isLoginVisible = loginPanel.classList.contains('active');
+      const el = isLoginVisible ? document.getElementById('pincode-hint') : document.getElementById('reg-hint');
+      if (el) {
+        el.textContent = msg;
+        el.className = 'pincode-hint' + (type ? ' hint-' + type : '');
+      }
     }
 
     function updateWalletDisplay() {
       const amountEl = document.getElementById('wallet-amount');
-      const startBtn = document.querySelector('.start-btn');
       if (_walletBalance !== null) {
         amountEl.textContent = _walletBalance;
         document.getElementById('wallet-display').style.visibility = 'visible';
@@ -280,126 +326,46 @@
         amountEl.textContent = '--';
         document.getElementById('wallet-display').style.visibility = 'hidden';
       }
-      if (startBtn) {
-        const btnActive = (_authState === 'verified' || _authState === 'needs_register' || _authState === 'needs_pin');
-        startBtn.disabled = !btnActive;
-        startBtn.style.opacity = !btnActive ? '0.4' : '';
-      }
     }
 
-    // ─── 核心：自动验证身份并获取荷包 ──────────────────────────────────────
+    // ─── 登录流程 ──────────────────────────────────────────────────────────
 
-    function autoValidateIdentity(username, pincode) {
-      // 【测试沙盒】拦截，不发网络请求
-      if (window.IS_TEST_MODE) {
-        _authState = 'verified';
-        _walletBalance = 300;
-        updateWalletDisplay();
-        return;
-      }
-      if (!username || !pincode || pincode.length !== 4) return;
-      setHint('正在验证身份…', 'info');
-      doGetWallet(username, pincode, null);
-    }
-
-    // ─── 步骤1：输入昵称 → 防抖查询 checkUsername ──────────────────────────
-
-    function onUsernameInput() {
+    function doLogin() {
+      tap();
       const username = document.getElementById('username-input').value.trim();
       const pincode  = document.getElementById('pincode-input').value.trim();
-      localStorage.setItem('doukou_username', username);
 
-      // ═══ 【测试沙盒彩蛋】特殊昵称 debug 拦截 ═══
+      // 【测试沙盒彩蛋】
       if (username.toLowerCase() === 'debug') {
         window.IS_TEST_MODE = true;
         _authState = 'verified';
         _walletBalance = 300;
         document.getElementById('pincode-input').value = '0000';
-        updateWalletDisplay();  // 刷新按钮可点击状态
+        updateWalletDisplay();
         setHint('【沙盒测试模式】已激活！300筹码已就绪', 'ok');
+        _launchGame(username, '0000');
         return;
       }
       window.IS_TEST_MODE = false;
-      // ═══════════════════════════════════════════
 
-      _authState = 'idle';
-      _walletBalance = null;
-      updateWalletDisplay();
-      setHint('', '');
-
-      clearTimeout(_usernameDebounce);
-      clearTimeout(_usernameTimer);
-      if (!username) return;
-
-      // 名字+密码都齐了，直接验证
-      if (pincode.length === 4) {
-        autoValidateIdentity(username, pincode);
-        return;
-      }
-
-      _authState = 'checking';
-      setHint('查询中…', 'info');
-      _usernameTimer = setTimeout(() => doCheckUsername(username), 800);
+      if (!username) { setHint('请输入昵称', 'err'); return; }
+      if (!pincode || pincode.length !== 4) { setHint('请输入4位密码', 'err'); return; }
+      setHint('验证中…', 'info');
+      doGetWallet(username, pincode, () => _launchGame(username, pincode));
     }
 
-    // ─── 密码框输入事件 ───────────────────────────────────────────────────
+    // ─── 注册流程 ──────────────────────────────────────────────────────────
 
-    function onPincodeInput() {
-      const username = document.getElementById('username-input').value.trim();
-      const pincode  = document.getElementById('pincode-input').value.trim();
-      localStorage.setItem('doukou_pincode', pincode);
+    function doRegisterAndLaunch() {
+      tap();
+      const username = document.getElementById('reg-username-input').value.trim();
+      const pincode  = document.getElementById('reg-pincode-input').value.trim();
+      const confirm  = document.getElementById('reg-pincode-confirm').value.trim();
 
-      if (pincode.length === 4 && /^\d+$/.test(pincode)) {
-        // 密码已满，立即掐断昵称防抖，全速发请求
-        clearTimeout(_usernameDebounce);
-        clearTimeout(_usernameTimer);
-        if (username) {
-          autoValidateIdentity(username, pincode);
-        }
-      } else {
-        if (_authState === 'verified') _authState = 'needs_pin';
-        if (pincode.length > 0 && !/^\d+$/.test(pincode)) {
-          setHint('密码必须为4位纯数字', 'err');
-        }
-        updateWalletDisplay();
-      }
-    }
+      if (!username) { setHint('请输入昵称', 'err'); return; }
+      if (!pincode || pincode.length !== 4) { setHint('请设置4位密码', 'err'); return; }
+      if (pincode !== confirm) { setHint('两次密码不一致', 'err'); return; }
 
-    function doCheckUsername(username) {
-      fetch(SHEETS_URL + '?action=checkUsername&username=' + encodeURIComponent(username))
-        .then(r => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(data => {
-          const pInput = document.getElementById('pincode-input');
-          if (data.status === 'exists') {
-            _authState = 'needs_pin';
-            setHint('已有帐号，请输入密码验证', 'info');
-            // 密码框已有合规密码则直接验证，否则自动聚焦到密码框
-            const pincode = pInput.value.trim();
-            if (pincode.length === 4) {
-              autoValidateIdentity(username, pincode);
-            } else {
-              pInput.focus();
-            }
-          } else {
-            _authState = 'needs_register';
-            setHint('新用户，请设置4位密码', 'info');
-            pInput.focus(); // 自动聚焦，唤起数字键盘
-          }
-          updateWalletDisplay();
-        })
-        .catch(() => {
-          _authState = 'idle';
-          setHint('查询失败（请检查GAS授权是否完成）', 'err');
-          updateWalletDisplay();
-        });
-    }
-
-    // ─── 注册 ─────────────────────────────────────────────────────────────────
-
-    function doRegister(username, pincode) {
       setHint('注册中…', 'info');
       fetch(SHEETS_URL + '?action=register&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
         .then(r => {
@@ -407,26 +373,31 @@
           return r.json();
         })
         .then(data => {
+          if (window.IS_GAMING) return;
           if (data.status === 'ok') {
             _walletBalance = data.balance;
             _authState = 'verified';
             localStorage.setItem('doukou_username', username);
-            localStorage.setItem('doukou_pincode',  pincode);
+            localStorage.setItem('doukou_pincode', pincode);
             setHint('注册成功！获得 ' + data.balance + ' 筹码', 'ok');
             updateWalletDisplay();
+            // 同步填入登录面板，方便下次
+            document.getElementById('username-input').value = username;
+            document.getElementById('pincode-input').value = pincode;
             _launchGame(username, pincode);
           } else if (data.status === 'duplicate') {
-            _authState = 'needs_pin';
-            setHint('昵称已被注册，请直接登录', 'err');
-            updateWalletDisplay();
+            setHint('昵称已被注册，请换一个或直接登录', 'err');
           } else {
             setHint('注册失败：' + (data.message || ''), 'err');
           }
         })
-        .catch(() => setHint('注册失败（请检查GAS授权是否完成）', 'err'));
+        .catch(() => {
+          if (window.IS_GAMING) return;
+          setHint('注册失败（请检查网络）', 'err');
+        });
     }
 
-    // ─── 登录 / 返回起始页查询荷包 ─────────────────────────────────────────
+    // ─── 登录：验证密码并获取荷包 ──────────────────────────────────────────
 
     function doGetWallet(username, pincode, callback) {
       setHint('验证中…', 'info');
@@ -436,54 +407,56 @@
           return r.json();
         })
         .then(data => {
+          if (window.IS_GAMING) return;
           if (data.status === 'ok') {
             _walletBalance = data.balance;
             _authState = 'verified';
             localStorage.setItem('doukou_username', username);
-            localStorage.setItem('doukou_pincode',  pincode);
+            localStorage.setItem('doukou_pincode', pincode);
             setHint('荷包：' + data.balance + ' 筹码', 'ok');
             updateWalletDisplay();
             if (callback) callback();
           } else if (data.status === 'wrong_pin') {
-            _authState = 'needs_pin';
+            _authState = 'idle';
             setHint('密码错误，请重试', 'err');
             updateWalletDisplay();
           } else {
             _authState = 'idle';
-            setHint('登录异常：' + (data.message || data.status), 'err');
+            setHint('账号不存在，请先注册', 'err');
             updateWalletDisplay();
           }
         })
         .catch(() => {
+          if (window.IS_GAMING) return;
           _authState = 'idle';
-          setHint('登录失败（请检查GAS授权是否完成）', 'err');
+          setHint('网络连接失败，请重试', 'err');
           updateWalletDisplay();
         });
     }
 
-    // ─── 进入游戏按钮 ────────────────────────────────────────────────────────
+    // ─── 静默同步荷包（backToStart 用，不弹提示不出错） ──────────────────
 
-    function onStart() {
-      tap();
-      const username = document.getElementById('username-input').value.trim();
-      const pincode  = document.getElementById('pincode-input').value.trim();
-
-      if (_authState === 'verified') {
-        _launchGame(username, pincode);
-      } else if (_authState === 'needs_register') {
-        if (!pincode) { alert('请设置4位密码！'); return; }
-        doRegister(username, pincode);
-      } else if (_authState === 'needs_pin') {
-        if (!pincode) { alert('请输入密码！'); return; }
-        doGetWallet(username, pincode, () => _launchGame(username, pincode));
-      } else {
-        if (!username) { alert('请先输入昵称！'); return; }
-        doCheckUsername(username);
-        alert('请稍候，正在验证身份…');
-      }
+    function doGetWalletSilent(username, pincode) {
+      fetch(SHEETS_URL + '?action=getWallet&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
+        .then(r => r.json())
+        .then(data => {
+          if (window.IS_GAMING) return;
+          if (data.status === 'ok') {
+            _walletBalance = data.balance;
+            localStorage.setItem('doukou_username', username);
+            localStorage.setItem('doukou_pincode', pincode);
+            updateWalletDisplay();  // 仅刷新数字，无提示
+          }
+        })
+        .catch(() => {});  // 静默忽略错误
     }
 
+    // ─── 进入游戏 ────────────────────────────────────────────────────────
+
     function _launchGame(username, pincode) {
+      // 进入对局后锁死，防止后台迟到的网络回调篡改认证状态
+      window.IS_GAMING = true;
+
       // 入场金额：不超过荷包余额，优先用荷包余额作为带入上限
       const walletBal = (_walletBalance !== null && _walletBalance > 0) ? _walletBalance : selectedBuyin;
       const buyin = Math.min(selectedBuyin, walletBal);
@@ -502,27 +475,30 @@
       updatePnlLabels('pnl-labels');
     }
 
-    // ─── 屏幕切换 ────────────────────────────────────────────────────────────
+    // ─── 屏幕切换（再战回来） ────────────────────────────────────────────
 
     function backToStart() {
+      // 退回首页，解除对局锁
+      window.IS_GAMING = false;
+
       showScreen('start-screen');
-      const uInput = document.getElementById('username-input');
-      const pInput = document.getElementById('pincode-input');
+      // 切到登录面板，预填账密
+      switchAuthTab('login');
       const name = (game._username) || localStorage.getItem('doukou_username') || '';
       const pin  = (game._pincode)  || localStorage.getItem('doukou_pincode')  || '';
-      uInput.value = name;
-      pInput.value = pin;
+      document.getElementById('username-input').value = name;
+      document.getElementById('pincode-input').value = pin;
       if (name && pin) {
-        // 先斩后奏：用刚结束的本场结算余额立即显示，按钮瞬间可点
-        if (game._walletAfter != null) {
+        // 核心体验：刚打完一局 → 直接继承最新余额，瞬间可点
+        if (game.roundNo > 0 && game._walletAfter != null) {
           _walletBalance = game._walletAfter;
           _authState = 'verified';
           updateWalletDisplay();
+          // 后台静默同步云端最新余额
+          doGetWalletSilent(name, pin);
         } else {
-          _authState = 'needs_pin';
+          doGetWallet(name, pin, null);
         }
-        // 后台静默同步最新云端余额，完成后悄悄刷新数字
-        autoValidateIdentity(name, pin);
       } else {
         _authState = 'idle';
         _walletBalance = null;
@@ -530,30 +506,38 @@
       }
     }
 
-    // ─── 页面初始化 ──────────────────────────────────────────────────────────
+    // ─── 页面初始化 ──────────────────────────────────────────────────────
 
-    function initUsername() {
-      const uInput = document.getElementById('username-input');
-      const pInput = document.getElementById('pincode-input');
-      // 强制清空（防止浏览器自动填充旧数据）
-      uInput.value = '';
-      pInput.value = '';
+    function initStartScreen() {
+      switchAuthTab('login');
+      // 清空所有输入
+      document.getElementById('username-input').value = '';
+      document.getElementById('pincode-input').value = '';
+      document.getElementById('reg-username-input').value = '';
+      document.getElementById('reg-pincode-input').value = '';
+      document.getElementById('reg-pincode-confirm').value = '';
       _walletBalance = null;
       _authState = 'idle';
       updateWalletDisplay();
-      // 从 localStorage 恢复
+      // 从 localStorage 恢复并自动验证
       const savedName = localStorage.getItem('doukou_username');
       const savedPin  = localStorage.getItem('doukou_pincode');
-      if (savedName) uInput.value = savedName;
-      if (savedPin)  pInput.value = savedPin;
-      // 名字和密码都有，自动验证
+      if (savedName) document.getElementById('username-input').value = savedName;
+      if (savedPin)  document.getElementById('pincode-input').value = savedPin;
       if (savedName && savedPin) {
-        _authState = 'needs_pin';
-        autoValidateIdentity(savedName, savedPin);
-      } else if (savedName) {
-        doCheckUsername(savedName);
+        doGetWallet(savedName, savedPin, null);
       }
     }
+
+    // 🔒 页面意外离开/刷新拦截：对局中时打印调用栈并提示用户
+    window.addEventListener('beforeunload', function(e) {
+      if (window.IS_GAMING) {
+        console.trace('【警告】网页正在试图离开对局页面或刷新！');
+        e.preventDefault();
+        e.returnValue = '确认离开当前对局吗？';
+        return e.returnValue;
+      }
+    });
 
     function selectMode(mode) {
       tap();
@@ -640,6 +624,11 @@
      * 返回 { target, amount } 或 { target: 'SKIP', amount: 0 }
      */
     function shadowDecide(hands, shadowPurse, bossPurse) {
+      // 🛡️ 防御：hands 为空或长度不足时直接跳过
+      if (!hands || hands.length < 4 || !hands[0] || !hands[1] || !hands[2] || !hands[3]) {
+        return { target: 'SKIP', amount: 0 };
+      }
+
       // 影子退场：庄家开局筹码 - 影子净胜筹码 <= 阈値
       const shadowNetWin = shadowPurse - INITIAL_PURSE;
       if ((INITIAL_PURSE - shadowNetWin) <= SHADOW_EXIT_THRESHOLD) {
@@ -711,6 +700,8 @@
      */
     function shadowSettle(hands, settlement, bossPurseForCap) {
       if (shadow.exited) return;
+      // 🛡️ 防御：hands 或 settlement 异常时安全跳过
+      if (!hands || !settlement || !settlement.employeeResults) return;
 
       const dec = shadowDecide(hands, shadow.purse, bossPurseForCap);
       game._shadowLastDec = dec; // 保存当局决策以便写入日志
@@ -745,61 +736,73 @@
     }
 
     function showReview() {
-      tap();
-      if (!_prevRoundData) return;
-      const d = _prevRoundData;
-      const s = d.settlement;
-      const labels = ['Boss', 'A', 'B', 'C'];
+      try {
+        tap();
+        if (!_prevRoundData) return;
+        const d = _prevRoundData;
+        const s = d.settlement;
+        const labels = ['Boss', 'A', 'B', 'C'];
 
-      let html = '<div class="review-sheet">';
-      html += '<div class="review-header"><span>回看上一局</span><button onclick="closeReview()">✕</button></div>';
+        let html = '<div class="review-sheet">';
+        html += '<div class="review-header"><span>回看上一局</span><button onclick="closeReview()">✕</button></div>';
 
-      // Card rows
-      for (let i = 0; i < 4; i++) {
-        const hand = d.hands[i];
-        const isEmp = i >= 1;
-        const lbl = labels[i];
-        let cls = 'review-row';
-        if (isEmp) {
-          const er = s.employeeResults[lbl];
-          if (er) cls += er.won ? ' rw' : ' rl';
-        }
-        html += `<div class="${cls}">`;
-        html += `<span class="review-lbl">${lbl}</span>`;
-        html += '<span class="review-cards">';
-        for (let j = 0; j < 5; j++) html += `<span class="rc">${hand[j]}</span>`;
-        html += '</span>';
-        if (isEmp) {
-          const er = s.employeeResults[lbl];
-          if (er) {
-            const mark = er.won ? '胜' : '负';
-            const mult = er.won && er.mult > 1 ? ` ×${er.mult}` : '';
-            html += `<span class="review-result ${er.won ? 'rw' : 'rl'}">${mark}${mult}</span>`;
+        // Card rows
+        for (let i = 0; i < 4; i++) {
+          const hand = d.hands[i];
+          const isEmp = i >= 1;
+          const lbl = labels[i];
+          let cls = 'review-row';
+          if (isEmp) {
+            const er = s.employeeResults[lbl];
+            if (er) cls += er.won ? ' rw' : ' rl';
           }
-        } else {
-          html += `<span class="review-result ${s.observerPnl < 0 ? 'rw' : 'rl'}">${s.observerPnl < 0 ? '吃' : '亏'}</span>`;
+          html += `<div class="${cls}">`;
+          html += `<span class="review-lbl">${lbl}</span>`;
+          html += '<span class="review-cards">';
+          for (let j = 0; j < 5; j++) html += `<span class="rc">${hand[j]}</span>`;
+          html += '</span>';
+          if (isEmp) {
+            const er = s.employeeResults[lbl];
+            if (er) {
+              const mark = er.won ? '胜' : '负';
+              const mult = er.won && er.mult > 1 ? ` ×${er.mult}` : '';
+              html += `<span class="review-result ${er.won ? 'rw' : 'rl'}">${mark}${mult}</span>`;
+            }
+          } else {
+            html += `<span class="review-result ${s.observerPnl < 0 ? 'rw' : 'rl'}">${s.observerPnl < 0 ? '吃' : '亏'}</span>`;
+          }
+          html += '</div>';
         }
+
+        // PnL
+        const pnl = s.observerPnl;
+        html += `<div class="review-pnl ${pnl > 0 ? 'rw' : 'rl'}">${pnl > 0 ? '+' : ''}${pnl}</div>`;
         html += '</div>';
+
+        document.getElementById('review-overlay').innerHTML = html;
+        document.getElementById('review-overlay').classList.add('show');
+      } catch (e) {
+        console.error('【对局操作报错拦截】showReview:', e);
       }
-
-      // PnL
-      const pnl = s.observerPnl;
-      html += `<div class="review-pnl ${pnl > 0 ? 'rw' : 'rl'}">${pnl > 0 ? '+' : ''}${pnl}</div>`;
-      html += '</div>';
-
-      document.getElementById('review-overlay').innerHTML = html;
-      document.getElementById('review-overlay').classList.add('show');
     }
 
     function closeReview() {
-      tap();
-      document.getElementById('review-overlay').classList.remove('show');
+      try {
+        tap();
+        document.getElementById('review-overlay').classList.remove('show');
+      } catch (e) {
+        console.error('【对局操作报错拦截】closeReview:', e);
+      }
     }
 
     function goNextRound() {
-      // Preserve current round data for review before advancing
-      if (_lastRoundData) _prevRoundData = _lastRoundData;
-      nextRound();
+      try {
+        // Preserve current round data for review before advancing
+        if (_lastRoundData) _prevRoundData = _lastRoundData;
+        nextRound();
+      } catch (e) {
+        console.error('【对局操作报错拦截】goNextRound:', e);
+      }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -807,51 +810,55 @@
     // ═══════════════════════════════════════════════════════
 
     function renderGameScreen(settlement, actionEval) {
-      showScreen('game-screen');
+      try {
+        showScreen('game-screen');
 
-      // Save for review and for current re-render
-      if (settlement && game.phase === 'result') {
-        _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
-        game._lastSettlement = settlement;
-        game._lastActionEval = actionEval;
-        // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
-        const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
-        shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
-        // 把影子选手当局数据追加到最后一条 round log
-        const lastLog = game.log[game.log.length - 1];
-        if (lastLog && lastLog.type === 'round') {
-          const dec = game._shadowLastDec || {};
-          lastLog.shadow = {
-            target: dec.target || 'SKIP',
-            amount: dec.amount || 0,
-            purseAfter: shadow.purse,
-            exited: shadow.exited
-          };
+        // Save for review and for current re-render
+        if (settlement && game.phase === 'result') {
+          _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
+          game._lastSettlement = settlement;
+          game._lastActionEval = actionEval;
+          // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
+          const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
+          shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
+          // 把影子选手当局数据追加到最后一条 round log
+          const lastLog = game.log[game.log.length - 1];
+          if (lastLog && lastLog.type === 'round') {
+            const dec = game._shadowLastDec || {};
+            lastLog.shadow = {
+              target: dec.target || 'SKIP',
+              amount: dec.amount || 0,
+              purseAfter: shadow.purse,
+              exited: shadow.exited
+            };
+          }
         }
+
+        document.getElementById('round-num').textContent = game.roundNo;
+        document.getElementById('round-in').textContent = game.stats.bet || 0;
+        document.getElementById('round-win').textContent = game.stats.win || 0;
+        document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
+        document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
+
+        const totalPurse = game.obsPurse + game.bossPurse;
+        const obsPct = Math.max(0, Math.min(100, (game.obsPurse / totalPurse) * 100));
+        const bossPct = Math.max(0, Math.min(100, (game.bossPurse / totalPurse) * 100));
+        document.getElementById('obs-bar').style.width = obsPct + '%';
+        document.getElementById('boss-bar').style.width = bossPct + '%';
+
+        renderCardTable(settlement);
+        renderPnlChart();
+
+        if (settlement && game.phase === 'result') {
+          renderResult(settlement, actionEval);
+        } else {
+          document.getElementById('result-section').classList.remove('show');
+        }
+
+        renderActionBar();
+      } catch (e) {
+        console.error('【对局操作报错拦截】renderGameScreen:', e);
       }
-
-      document.getElementById('round-num').textContent = game.roundNo;
-      document.getElementById('round-in').textContent = game.stats.bet || 0;
-      document.getElementById('round-win').textContent = game.stats.win || 0;
-      document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
-      document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
-
-      const totalPurse = game.obsPurse + game.bossPurse;
-      const obsPct = Math.max(0, Math.min(100, (game.obsPurse / totalPurse) * 100));
-      const bossPct = Math.max(0, Math.min(100, (game.bossPurse / totalPurse) * 100));
-      document.getElementById('obs-bar').style.width = obsPct + '%';
-      document.getElementById('boss-bar').style.width = bossPct + '%';
-
-      renderCardTable(settlement);
-      renderPnlChart();
-
-      if (settlement && game.phase === 'result') {
-        renderResult(settlement, actionEval);
-      } else {
-        document.getElementById('result-section').classList.remove('show');
-      }
-
-      renderActionBar();
     }
 
     function renderCardTable(settlement) {
@@ -1057,9 +1064,13 @@
     }
 
     function confirmRun() {
-      tap();
-      if (confirm('确认退场？')) {
-        onBet('RUN', 0);
+      try {
+        tap();
+        if (confirm('确认退场？')) {
+          onBet('RUN', 0);
+        }
+      } catch (e) {
+        console.error('【对局操作报错拦截】confirmRun:', e);
       }
     }
 
@@ -1070,16 +1081,20 @@
     let manualTarget = null;
 
     function selectEmployee(target) {
-      if (game.phase !== 'betting') return;
-      tap();
-      // Toggle: clicking same employee deselects
-      if (manualTarget === target) {
-        manualTarget = null;
-      } else {
-        manualTarget = target;
+      try {
+        if (game.phase !== 'betting') return;
+        tap();
+        // Toggle: clicking same employee deselects
+        if (manualTarget === target) {
+          manualTarget = null;
+        } else {
+          manualTarget = target;
+        }
+        renderCardTable();
+        renderActionBar();
+      } catch (e) {
+        console.error('【对局操作报错拦截】selectEmployee:', e);
       }
-      renderCardTable();
-      renderActionBar();
     }
 
     function buildStakePickerHtml(target) {
@@ -1106,16 +1121,24 @@
     }
 
     function onBetAndReset(target, amount) {
-      tap();
-      manualTarget = null;
-      onBet(target, amount);
+      try {
+        tap();
+        manualTarget = null;
+        onBet(target, amount);
+      } catch (e) {
+        console.error('【对局操作报错拦截】onBetAndReset:', e);
+      }
     }
 
     function confirmStake16(target) {
-      tap();
-      if (confirm('投注 $16 — 确认大注？')) {
-        manualTarget = null;
-        onBet(target, 16);
+      try {
+        tap();
+        if (confirm('投注 $16 — 确认大注？')) {
+          manualTarget = null;
+          onBet(target, 16);
+        }
+      } catch (e) {
+        console.error('【对局操作报错拦截】confirmStake16:', e);
       }
     }
 
@@ -1124,8 +1147,12 @@
     // ═══════════════════════════════════════════════════════
 
     function onBet(target, amount) {
-      tap();
-      placeBet(target, amount);
+      try {
+        tap();
+        placeBet(target, amount);
+      } catch (e) {
+        console.error('【对局操作报错拦截】onBet:', e);
+      }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1723,7 +1750,7 @@
     // ═══════════════════════════════════════════════════════
 
     showScreen('start-screen');
-    initUsername();
+    initStartScreen();
   </script>
 </body>
 </html>
