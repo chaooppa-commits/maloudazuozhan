@@ -254,8 +254,11 @@
     }
 
     // 移动端无感解锁音频源
+    let _audioUnlocked = false;
     function _unlockAudio() {
+      if (_audioUnlocked) return;
       _tapAudio.play().then(() => {
+        _audioUnlocked = true;
         // 激活成功后，立刻暂停并重置，用户完全听不到声音，但音频通道已经对该网页终身放行
         _tapAudio.pause();
         _tapAudio.currentTime = 0;
@@ -1301,19 +1304,32 @@
 
     function renderPnlChart() {
       const canvas = document.getElementById('pnl-canvas');
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      const dpr = window.devicePixelRatio || 2;
 
-      const w = rect.width;
-      const h = rect.height;
+      // 画布尺寸只在变化时重置，防止移动端 WebKit 内存泄漏/闪退
+      if (canvas._cacheW !== w || canvas._cacheH !== h || canvas._cacheDpr !== dpr) {
+        canvas._cacheW = w;
+        canvas._cacheH = h;
+        canvas._cacheDpr = dpr;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+      }
+      if (w <= 0 || h <= 0) return;
+
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
       const data = game.pnlHistory;
       const shData = shadow.pnlHistory;
 
       if (data.length < 2) {
-        ctx.clearRect(0, 0, w, h);
+        ctx.restore();
         return;
       }
 
@@ -1321,8 +1337,6 @@
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
-
-      ctx.clearRect(0, 0, w, h);
 
       updatePnlLabels('pnl-labels');
 
@@ -1351,6 +1365,8 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
+
+      ctx.restore();
     }
 
     function renderEndPnlChart() {
@@ -1358,23 +1374,35 @@
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      const dpr = window.devicePixelRatio || 2;
 
-      const w = rect.width;
-      const h = rect.height;
+      if (canvas._cacheW !== w || canvas._cacheH !== h || canvas._cacheDpr !== dpr) {
+        canvas._cacheW = w;
+        canvas._cacheH = h;
+        canvas._cacheDpr = dpr;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+      }
+      if (w <= 0 || h <= 0) return;
+
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
       const data = game.pnlHistory;
       const shData = shadow.pnlHistory;
 
-      if (data.length < 2) return;
+      if (data.length < 2) {
+        ctx.restore();
+        return;
+      }
 
       const allVals = [...data, ...shData, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
-
-      ctx.clearRect(0, 0, w, h);
 
       updatePnlLabels('end-pnl-labels');
 
@@ -1403,6 +1431,8 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
+
+      ctx.restore();
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1792,6 +1822,13 @@
     // ═══════════════════════════════════════════════════════
     // Init
     // ═══════════════════════════════════════════════════════
+
+    // 消除移动端 300ms 点击延迟和双击缩放，降低 WebView 图层崩溃概率
+    (function() {
+      const s = document.createElement('style');
+      s.textContent = 'body, button, .card, .player-row, .bet-btn, .tier-table-btn, .quiz-option, .quiz-tier-opt, .quiz-submit-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }';
+      document.head.appendChild(s);
+    })();
 
     showScreen('start-screen');
     initStartScreen();
