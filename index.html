@@ -713,11 +713,13 @@
       // 步骤2：按等级差决定下注额
       const tierGap = bestEmpTier - bossTier;
 
-      // 中优势：2档差 → 下4；但1234组合只有1档差也算中优势 → 下4
+      // 中优势：2档差 → 下4；但影子选手(员工A)拿到1234组合时，1档差也算中优势 → 下4
       // 高优势：3档差 → 下8
       // 超优势：4档差 → 下12
       // 其他：pass
-      const is1234 = (bossInfo && bossInfo.mn === '1234'); // 庄家拿到1234组合时，1档也当中优势
+      const bestEmpIdx = ['A', 'B', 'C'].indexOf(bestTarget) + 1;
+      const bestEmpInfo = lookupTier(hands[bestEmpIdx][0], hands[bestEmpIdx][1]);
+      const is1234 = (bestEmpInfo && bestEmpInfo.mn === '1234'); // 员工拿到1234组合时，1档差也当中优势
       let stake = 0;
       if (tierGap === 2 || (tierGap === 1 && is1234)) {
         stake = 4;
