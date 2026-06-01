@@ -506,15 +506,18 @@ html, body {
 }
 
 .score-badge {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   padding: 3px 8px;
   border-radius: 6px;
   font-weight: 700;
-  background: rgba(148,163,184,0.12);
-  color: var(--text-primary);
+  color: var(--text-dim);
   text-align: center;
   white-space: nowrap;
 }
+
+.score-badge.score-win  { color: var(--green); }
+.score-badge.score-mult { color: var(--gold); }
+.score-badge.score-lose { color: var(--accent); }
 
 .mn-tag {
   display: inline-block;
