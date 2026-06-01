@@ -76,6 +76,10 @@ function reportToSheets() {
     rationalCnt: game.stats.rationalCnt,
     aggressCnt:  game.stats.aggressCnt,
     conservCnt:  game.stats.conservCnt,
+    dodgeCorrect: game.stats.dodgeCorrect,
+    dodgeTotal:   game.stats.dodgeTotal,
+    // 起死回生：仅本场赢时上报最低值，输场上报0
+    comebackMin: (netPnl > 0 && game.stats.comebackMin !== null) ? game.stats.comebackMin : 0,
     shadowWinRate: shadowWinRate,
     shadowRoi:     shadowRoi,
     sessionNo:     sessionNo
@@ -221,7 +225,10 @@ function startGame(kellyMode, seedStr, buyin) {
     flatEat: { obs: 0, A: 0, B: 0, C: 0 },
     rationalCnt: 0,
     aggressCnt:  0,
-    conservCnt:  0
+    conservCnt:  0,
+    dodgeCorrect: 0,  // 精准闪避：跳过时最强员工输了
+    dodgeTotal: 0,    // 精准闪避：总跳过局数
+    comebackMin: null  // 起死回生：筹码跌破初始后的最低值（null=未跌破）
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -307,6 +314,13 @@ function placeBet(target, amount) {
     if (game.obsPurse > game.obsMaxPurse) game.obsMaxPurse = game.obsPurse;
     if (game.obsPurse < game.obsMinPurse) game.obsMinPurse = game.obsPurse;
   
+    // 追踪起死回生：筹码跌破初始值后记录最低点
+    if (game.obsPurse < game._initialPurse) {
+      if (game.stats.comebackMin === null || game.obsPurse < game.stats.comebackMin) {
+        game.stats.comebackMin = game.obsPurse;
+      }
+    }
+  
     if (game.currentBet.target !== 'SKIP') {
       if (observerPnl > 0) game.stats.win++;
       else game.stats.lose++;
@@ -325,6 +339,29 @@ function placeBet(target, amount) {
       }
     }
   
+    // 精准闪避统计：SKIP时，最强员工是否输了（输了=闪避成功）
+    if (game.currentBet.target === 'SKIP') {
+      game.stats.dodgeTotal++;
+      // 找出本局战力最强的员工
+      const allVisible = [];
+      for (let i = 0; i < 4; i++) allVisible.push(game.hands[i][0], game.hands[i][1]);
+      let strongestEmp = null;
+      let strongestPower = -999;
+      for (const lbl of ['A', 'B', 'C']) {
+        const idx = { A: 1, B: 2, C: 3 }[lbl];
+        const v = [game.hands[idx][0], game.hands[idx][1]];
+        const info = lookupTier(v[0], v[1]);
+        const power = info ? info.mp : 30;
+        if (power > strongestPower) {
+          strongestPower = power;
+          strongestEmp = lbl;
+        }
+      }
+      if (strongestEmp && !settlement.employeeResults[strongestEmp].won) {
+        game.stats.dodgeCorrect++;
+      }
+    }
+
     // Track PnL
     const cumPnl = game.pnlHistory[game.pnlHistory.length - 1] + observerPnl;
     game.pnlHistory.push(cumPnl);
@@ -739,6 +776,8 @@ function analyzeSession() {
     pass3EmpWin,
     passEmp10pts,
     empOverall,
-    netPnl: game.obsPurse - INITIAL_PURSE
+    netPnl: game.obsPurse - INITIAL_PURSE,
+    dodgeCorrect: game.stats.dodgeCorrect,
+    dodgeTotal: game.stats.dodgeTotal
   };
 }
