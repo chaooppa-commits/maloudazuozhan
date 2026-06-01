@@ -505,6 +505,17 @@ html, body {
   min-width: unset;
 }
 
+.score-badge {
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  background: rgba(148,163,184,0.12);
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+}
+
 .mn-tag {
   display: inline-block;
   font-size: 0.6rem;
@@ -565,47 +576,6 @@ html, body {
   color: var(--text-dim);
   border: 1px solid var(--border);
 }
-
-.structure-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.structure-item {
-  padding: 8px 10px;
-  background: var(--bg2);
-  border-radius: 10px;
-  font-size: 0.75rem;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
-.structure-item .struct-label {
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.structure-item .struct-text {
-  color: var(--text-dim);
-  word-break: break-all;
-}
-
-.emp-results {
-  margin-top: 8px;
-}
-
-.emp-result-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.emp-result-row .emp-label { font-weight: 600; }
-.emp-result-row .emp-win { color: var(--green); }
-.emp-result-row .emp-lose { color: var(--accent); }
 
 /* PnL mini chart */
 .pnl-labels {
@@ -848,40 +818,38 @@ html, body {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
   width: 100%;
-  max-width: 360px;
-  margin-bottom: 24px;
+  max-width: 400px;
+  margin-bottom: 16px;
 }
 
 .stat-card {
-  padding: 14px 12px;
+  padding: 6px 8px;
   background: var(--bg2);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   text-align: center;
-  box-shadow: var(--shadow);
-}
-
-.stat-card .stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
 }
 
 .stat-card .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.stat-card .stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .stat-card .stat-shadow {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-dim);
-  opacity: 0.6;
-  margin-top: 4px;
+  opacity: 0.55;
+  margin-top: 1px;
 }
 
 .stat-card.highlight {
