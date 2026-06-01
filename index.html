@@ -973,10 +973,19 @@
         html += `</div>`;
 
         if (showTier) {
-          // 得分揭晓阶段：显示点数类型，不再显示星级/战力/口诀
+          // 得分揭晓阶段：显示点数类型，颜色跟随胜负
           const scoreLabel = _getScoreLabel(hand);
+          let scoreCls = '';
+          if (isEmp && settlement) {
+            const er = settlement.employeeResults[empLabel];
+            if (er) {
+              if (er.won && er.mult > 1) scoreCls = 'score-mult';
+              else if (er.won) scoreCls = 'score-win';
+              else scoreCls = 'score-lose';
+            }
+          }
           html += `<div class="tier-info-col">`;
-          html += `<span class="score-badge">${scoreLabel}</span>`;
+          html += `<span class="score-badge ${scoreCls}">${scoreLabel}</span>`;
           html += `</div>`;
         } else if (isBetting && isSelected && tierInfo) {
           const starLbl = tierInfo.tier + '星';
@@ -1131,22 +1140,22 @@
     // 斗口+点数1-9 → "点数N"，纯点数 → "点数N"，无斗口 → "MISS"
     function _getScoreLabel(hand) {
       const result = findDoukou(hand);
-      if (!result) return '喔嚯';
+      if (!result) return 'miss';
       const type = result.type;
       if (type === '纯1') return '五幺';
       if (type === '纯10') return '愣十';
       // 斗口：取出点数两卡计算
       if (type.endsWith('斗口')) {
         const pts = calcPoints(result.points);
-        if (pts === 10) return '马股';
-        return '点数' + pts;
+        if (pts === 10) return '马喽';
+        return pts;
       }
       // 纯点数
       if (type === '纯点数') {
         const total = calcPurePoints(hand);
-        return '点数' + total;
+        return total;
       }
-      return '喔嚯';
+      return 'miss';
     }
 
     function selectEmployee(target) {
