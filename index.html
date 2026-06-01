@@ -972,11 +972,11 @@
         }
         html += `</div>`;
 
-        if (showTier && tierInfo) {
-          const starLbl = tierInfo.tier + '星';
+        if (showTier) {
+          // 得分揭晓阶段：显示点数类型，不再显示星级/战力/口诀
+          const scoreLabel = _getScoreLabel(hand);
           html += `<div class="tier-info-col">`;
-          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
-          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
+          html += `<span class="score-badge">${scoreLabel}</span>`;
           html += `</div>`;
         } else if (isBetting && isSelected && tierInfo) {
           const starLbl = tierInfo.tier + '星';
@@ -1022,6 +1022,14 @@
         html += `<div class="action-eval-row">`;
         html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
         html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
+        // 精准闪避即时反馈：SKIP时显示最强员工胜负
+        if (game.currentBet.target === 'SKIP') {
+          const strongestInfo = _getStrongestEmpResult(settlement);
+          if (strongestInfo) {
+            const dodgeOk = !strongestInfo.won;
+            html += `<span class="action-tag ${dodgeOk ? 'tag-rational' : 'tag-aggressive'}" style="margin-left:4px">${dodgeOk ? '精准闪避' : '错失良机'}</span>`;
+          }
+        }
         html += `</div>`;
       }
 
@@ -1042,34 +1050,6 @@
         html += `</div>`;
       }
       html += `</div>`;
-      html += `</div>`;
-
-      html += `<div class="structure-list">`;
-      const labels = ['Boss', 'A', 'B', 'C'];
-      for (let i = 0; i < 4; i++) {
-        const struct = explainHand(game.hands[i]);
-        const v = [game.hands[i][0], game.hands[i][1]];
-        const ti = lookupTier(v[0], v[1]);
-        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}星</span> <span class="mn-tag">${ti.mn}</span> <span class="mp-tag">${ti.mp}%</span>` : '';
-        html += `<div class="structure-item">`;
-        html += `<div class="struct-label">${labels[i]} ${tierStr}</div>`;
-        html += `<div class="struct-text">${struct}</div>`;
-        html += `</div>`;
-      }
-      html += `</div>`;
-
-      html += `<div class="emp-results">`;
-      for (const lbl of ['A', 'B', 'C']) {
-        const er = settlement.employeeResults[lbl];
-        const cls = er.won ? 'emp-win' : 'emp-lose';
-        const mark = er.won ? '胜' : '负';
-        const multStr = er.won && er.mult > 1 ? ` \u00d7${er.mult}` : '';
-        html += `<div class="emp-result-row">`;
-        html += `<span class="emp-label">员工${lbl}</span>`;
-        html += `<span class="${cls}">${mark}${multStr}</span>`;
-        html += `<span class="emp-reason" style="font-size:0.7rem;color:var(--text-dim)">${er.reason}</span>`;
-        html += `</div>`;
-      }
       html += `</div>`;
 
       section.innerHTML = html;
@@ -1126,6 +1106,48 @@
     // ═══════════════════════════════════════════════════════
 
     let manualTarget = null;
+
+    // 精准闪避辅助：找出本局战力最强的员工及其胜负
+    function _getStrongestEmpResult(settlement) {
+      if (!game.hands || !settlement || !settlement.employeeResults) return null;
+      let strongestEmp = null;
+      let strongestPower = -999;
+      for (const lbl of ['A', 'B', 'C']) {
+        const idx = { A: 1, B: 2, C: 3 }[lbl];
+        const v = [game.hands[idx][0], game.hands[idx][1]];
+        const info = lookupTier(v[0], v[1]);
+        const power = info ? info.mp : 30;
+        if (power > strongestPower) {
+          strongestPower = power;
+          strongestEmp = lbl;
+        }
+      }
+      if (!strongestEmp) return null;
+      return { label: strongestEmp, won: settlement.employeeResults[strongestEmp].won };
+    }
+
+    // 得分揭晓标签：根据5张牌的结构返回显示文本
+    // 纯1 → "五幺"，纯10 → "愣十"，斗口+点数=10 → "马股"，
+    // 斗口+点数1-9 → "点数N"，纯点数 → "点数N"，无斗口 → "MISS"
+    function _getScoreLabel(hand) {
+      const result = findDoukou(hand);
+      if (!result) return '喔嚯';
+      const type = result.type;
+      if (type === '纯1') return '五幺';
+      if (type === '纯10') return '愣十';
+      // 斗口：取出点数两卡计算
+      if (type.endsWith('斗口')) {
+        const pts = calcPoints(result.points);
+        if (pts === 10) return '马股';
+        return '点数' + pts;
+      }
+      // 纯点数
+      if (type === '纯点数') {
+        const total = calcPurePoints(hand);
+        return '点数' + total;
+      }
+      return '喔嚯';
+    }
 
     function selectEmployee(target) {
       try {
@@ -1225,8 +1247,8 @@
       
       function sc(myVal, shVal, label) {
         return `<div class="stat-card">
-          <div class="stat-value">${myVal}</div>
           <div class="stat-label">${label}</div>
+          <div class="stat-value">${myVal}</div>
           <div class="stat-shadow">${shVal}</div>
         </div>`;
       }
@@ -1234,33 +1256,34 @@
       const grid = document.getElementById('stats-grid');
       grid.innerHTML = `
         <div class="stat-card highlight">
-          <div class="stat-value">$${game.obsPurse}</div>
           <div class="stat-label">最终筹码</div>
+          <div class="stat-value">$${game.obsPurse}</div>
           <div class="stat-shadow">$${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
         </div>
         <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
+          <div class="stat-label">净盈亏</div>
           <div class="stat-value">${netPnl >= 0 ? '+' : ''}${netPnl}</div>
-          <div class="stat-label">净盈产</div>
           <div class="stat-shadow">${shadowNetPnl >= 0 ? '+' : ''}${shadowNetPnl}</div>
         </div>
         ${sc(game.roundNo, shadowRounds, '总局数')}
-        ${sc(`${totalBet}/${game.roundNo - totalBet}`, `${shadow.bet}/${shadow.skip}`, '下注/跳过')}
+        ${sc(`${totalBet}/${game.roundNo - totalBet}`, `${shadow.bet}/${shadow.skip}`, '出手/跳过')}
         ${sc(winRate + '%', shadowWinRate + '%', '胜率')}
         ${sc(roi + '%', shadowRoi + '%', 'ROI')}
+        ${sc(game.stats.win + '/' + game.stats.lose, shadow.win + '/' + shadow.lose, '胜/负')}
         <div class="stat-card">
-          <div class="stat-value">${game.stats.win}/${game.stats.lose}</div>
-          <div class="stat-label">胜/负</div>
-          <div class="stat-shadow">${shadow.win}/${shadow.lose}</div>
+          <div class="stat-label">平吃</div>
+          <div class="stat-value">${game.stats.flatEat.obs}局</div>
+          <div class="stat-shadow">同点/同无斗口</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">A${game.stats.betTargetCount.A} B${game.stats.betTargetCount.B} C${game.stats.betTargetCount.C}</div>
-          <div class="stat-label">押注分布</div>
-          <div class="stat-shadow">影子自动</div>
+        <div class="stat-card ${game.stats.dodgeTotal > 0 && (game.stats.dodgeCorrect / game.stats.dodgeTotal) >= 0.5 ? 'positive' : game.stats.dodgeTotal > 0 ? 'negative' : ''}">
+          <div class="stat-label">精准闪避</div>
+          <div class="stat-value">${game.stats.dodgeCorrect}/${game.stats.dodgeTotal}</div>
+          <div class="stat-shadow">${game.stats.dodgeTotal > 0 ? (game.stats.dodgeCorrect / game.stats.dodgeTotal * 100).toFixed(0) + '%' : '-'}</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">A${game.stats.flatEat.A} B${game.stats.flatEat.B} C${game.stats.flatEat.C}</div>
-          <div class="stat-label">平吃 (同点/同无斗口)</div>
-          <div class="stat-shadow">计入obs: ${game.stats.flatEat.obs}局</div>
+        <div class="stat-card ${(netPnl > 0 && game.stats.comebackMin !== null) ? 'positive' : ''}">
+          <div class="stat-label">起死回生</div>
+          <div class="stat-value">${(netPnl > 0 && game.stats.comebackMin !== null) ? '$' + game.stats.comebackMin : '-'}</div>
+          <div class="stat-shadow">${(netPnl > 0 && game.stats.comebackMin !== null) ? '从$' + game.stats.comebackMin + '翻盘' : '无'}</div>
         </div>
       `;
 
@@ -1814,6 +1837,11 @@
             <span class="analysis-label">员工出10点(2x+)</span>
             <span class="analysis-value">${a.passEmp10pts}</span>
             <span class="analysis-pct">${a.skipRounds > 0 ? pct(a.passEmp10pts, a.skipRounds * 3) : '-'}</span>
+          </div>
+          <div class="analysis-row highlight-row">
+            <span class="analysis-label">精准闪避</span>
+            <span class="analysis-value">${a.dodgeCorrect}/${a.dodgeTotal}</span>
+            <span class="analysis-pct ${a.dodgeTotal > 0 && (a.dodgeCorrect / a.dodgeTotal) >= 0.5 ? 'positive' : 'negative'}">${a.dodgeTotal > 0 ? pct(a.dodgeCorrect, a.dodgeTotal) : '-'}</span>
           </div>
         </div>
       `;
