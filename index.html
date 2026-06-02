@@ -1031,11 +1031,31 @@
         html += `<div class="action-eval-row">`;
         html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
         html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
-        // 精准闪避即时反馈：SKIP时显示最强员工胜负
+        // 精准闪避即时反馈：SKIP时，只有没有员工强于老板才显示标签
         if (game.currentBet.target === 'SKIP') {
-          const strongestInfo = _getStrongestEmpResult(settlement);
-          if (strongestInfo) {
-            const dodgeOk = !strongestInfo.won;
+          // 计算老板战力
+          const bossV = [game.hands[0][0], game.hands[0][1]];
+          const bossInfo = lookupTier(bossV[0], bossV[1]);
+          const bossPower = bossInfo ? bossInfo.mp : 30;
+          // 检查是否有员工强于老板，同时找出最强员工
+          let hasStrongerEmp = false;
+          let strongestEmp = null;
+          let strongestPower = -999;
+          for (const lbl of ['A', 'B', 'C']) {
+            const idx = { A: 1, B: 2, C: 3 }[lbl];
+            const v = [game.hands[idx][0], game.hands[idx][1]];
+            const info = lookupTier(v[0], v[1]);
+            const power = info ? info.mp : 30;
+            if (power > bossPower) hasStrongerEmp = true;
+            if (power > strongestPower) {
+              strongestPower = power;
+              strongestEmp = lbl;
+            }
+          }
+          // 没有员工强于老板时才显示闪避/错失标签
+          if (!hasStrongerEmp && strongestEmp) {
+            const er = settlement.employeeResults[strongestEmp];
+            const dodgeOk = er && !er.won;
             html += `<span class="action-tag ${dodgeOk ? 'tag-rational' : 'tag-aggressive'}" style="margin-left:4px">${dodgeOk ? '精准闪避' : '错失良机'}</span>`;
           }
         }
@@ -1254,6 +1274,10 @@
       const shadowRoi = shadow.totalStaked > 0 ? (shadowNetPnl / shadow.totalStaked * 100).toFixed(0) : 0;
       const shadowRounds = shadow.bet + shadow.skip;
       
+      // 拉锯指数：筹码波动幅度 / 带入金额
+      const swing = game.obsMaxPurse - game.obsMinPurse;
+      const swingIndex = game._initialPurse > 0 ? (swing / game._initialPurse).toFixed(2) : '0.00';
+      
       function sc(myVal, shVal, label) {
         return `<div class="stat-card">
           <div class="stat-label">${label}</div>
@@ -1288,6 +1312,11 @@
           <div class="stat-label">精准闪避</div>
           <div class="stat-value">${game.stats.dodgeCorrect}/${game.stats.dodgeTotal}</div>
           <div class="stat-shadow">${game.stats.dodgeTotal > 0 ? (game.stats.dodgeCorrect / game.stats.dodgeTotal * 100).toFixed(0) + '%' : '-'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">拉锯指数</div>
+          <div class="stat-value">${swingIndex}</div>
+          <div class="stat-shadow">$${game.obsMinPurse} ~ $${game.obsMaxPurse}</div>
         </div>
         <div class="stat-card ${(netPnl > 0 && game.stats.comebackMin !== null) ? 'positive' : ''}">
           <div class="stat-label">起死回生</div>
