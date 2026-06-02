@@ -80,6 +80,8 @@ function reportToSheets() {
     dodgeTotal:   game.stats.dodgeTotal,
     // 起死回生：仅本场赢时上报最低值，输场上报0
     comebackMin: (netPnl > 0 && game.stats.comebackMin !== null) ? game.stats.comebackMin : 0,
+    // 拉锯指数：筹码波动幅度 / 带入金额
+    swingIndex: Math.round((game.obsMaxPurse - game.obsMinPurse) / game._initialPurse * 100) / 100,
     shadowWinRate: shadowWinRate,
     shadowRoi:     shadowRoi,
     sessionNo:     sessionNo
@@ -228,7 +230,7 @@ function startGame(kellyMode, seedStr, buyin) {
     conservCnt:  0,
     dodgeCorrect: 0,  // 精准闪避：跳过时最强员工输了
     dodgeTotal: 0,    // 精准闪避：总跳过局数
-    comebackMin: null  // 起死回生：筹码跌破初始后的最低值（null=未跌破）
+    comebackMin: null // 起死回生：筹码跌破初始后的最低值（null=未跌破）
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -339,12 +341,15 @@ function placeBet(target, amount) {
       }
     }
   
-    // 精准闪避统计：SKIP时，最强员工是否输了（输了=闪避成功）
+    // 精准闪避统计：只有没有任何员工强于老板时，才计入统计
     if (game.currentBet.target === 'SKIP') {
-      game.stats.dodgeTotal++;
-      // 找出本局战力最强的员工
-      const allVisible = [];
-      for (let i = 0; i < 4; i++) allVisible.push(game.hands[i][0], game.hands[i][1]);
+      // 计算老板战力
+      const bossV = [game.hands[0][0], game.hands[0][1]];
+      const bossInfo = lookupTier(bossV[0], bossV[1]);
+      const bossPower = bossInfo ? bossInfo.mp : 30;
+      
+      // 检查是否有员工强于老板，同时找出最强员工
+      let hasStrongerEmp = false;
       let strongestEmp = null;
       let strongestPower = -999;
       for (const lbl of ['A', 'B', 'C']) {
@@ -352,13 +357,19 @@ function placeBet(target, amount) {
         const v = [game.hands[idx][0], game.hands[idx][1]];
         const info = lookupTier(v[0], v[1]);
         const power = info ? info.mp : 30;
+        if (power > bossPower) hasStrongerEmp = true;
         if (power > strongestPower) {
           strongestPower = power;
           strongestEmp = lbl;
         }
       }
-      if (strongestEmp && !settlement.employeeResults[strongestEmp].won) {
-        game.stats.dodgeCorrect++;
+      
+      // 没有员工强于老板时，才计入闪避统计
+      if (!hasStrongerEmp) {
+        game.stats.dodgeTotal++;
+        if (strongestEmp && !settlement.employeeResults[strongestEmp].won) {
+          game.stats.dodgeCorrect++;
+        }
       }
     }
 
