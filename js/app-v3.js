@@ -54,6 +54,24 @@ function reportToSheets() {
   const sessionNo = (parseInt(localStorage.getItem(histKey), 10) || 0) + 1;
   localStorage.setItem(histKey, sessionNo);
 
+  // 员工胜率：使用 analyzeSession() 中的 empOverall 数据
+  const analysis = analyzeSession();
+  const empAWinRate = analysis && analysis.empOverall.A.total > 0
+    ? +(analysis.empOverall.A.wins / analysis.empOverall.A.total * 100).toFixed(1) : 0;
+  const empBWinRate = analysis && analysis.empOverall.B.total > 0
+    ? +(analysis.empOverall.B.wins / analysis.empOverall.B.total * 100).toFixed(1) : 0;
+  const empCWinRate = analysis && analysis.empOverall.C.total > 0
+    ? +(analysis.empOverall.C.wins / analysis.empOverall.C.total * 100).toFixed(1) : 0;
+
+  // 影子选手结束筹码
+  const shadowFinalPurse = (typeof shadow !== 'undefined') ? shadow.purse : 0;
+
+  // 注码收益
+  const stakePnl4  = game.stats.stakePnl[4]  || 0;
+  const stakePnl8  = game.stats.stakePnl[8]  || 0;
+  const stakePnl12 = game.stats.stakePnl[12] || 0;
+  const stakePnl16 = game.stats.stakePnl[16] || 0;
+
   const params = new URLSearchParams({
     action:      'endSession',
     user:        username,
@@ -84,7 +102,22 @@ function reportToSheets() {
     swingIndex: Math.round((game.obsMaxPurse - game.obsMinPurse) / game._initialPurse * 100) / 100,
     shadowWinRate: shadowWinRate,
     shadowRoi:     shadowRoi,
-    sessionNo:     sessionNo
+    sessionNo:     sessionNo,
+    // 新增字段：组十 员工胜率
+    empAWinRate:   empAWinRate,
+    empBWinRate:   empBWinRate,
+    empCWinRate:   empCWinRate,
+    // 新增字段：组十一 影子筹码
+    shadowFinalPurse: shadowFinalPurse,
+    // 新增字段：组十二 注码收益
+    stakePnl4:  stakePnl4,
+    stakePnl8:  stakePnl8,
+    stakePnl12: stakePnl12,
+    stakePnl16: stakePnl16,
+    // 新增字段：组十三 观察者损因
+    obsNoDoukou:  game.stats.obsNoDoukou,
+    obsLowerPts:  game.stats.obsLowerPts,
+    obsFlatEat:   game.stats.flatEat.obs
   });
 
   // ═══ 【测试沙盒】拦截，不上报真实数据 ═══
@@ -139,7 +172,10 @@ const game = {
   stats: {
     skip: 0, bet: 0, win: 0, lose: 0, totalStaked: 0,
     betTargetCount: { A: 0, B: 0, C: 0 },
-    stakeCount: {} // { amount: count }
+    stakeCount: {}, // { amount: count }
+    stakePnl: {},   // { amount: cumulativePnl }
+    obsNoDoukou: 0, // 观察者押注的员工无斗口次数
+    obsLowerPts: 0  // 观察者押注的员工点数小的次数
   },
 
   // Session log
@@ -224,13 +260,16 @@ function startGame(kellyMode, seedStr, buyin) {
     skip: 0, bet: 0, win: 0, lose: 0, totalStaked: 0,
     betTargetCount: { A: 0, B: 0, C: 0 },
     stakeCount: {},
+    stakePnl: {},
     flatEat: { obs: 0, A: 0, B: 0, C: 0 },
     rationalCnt: 0,
     aggressCnt:  0,
     conservCnt:  0,
     dodgeCorrect: 0,  // 精准闪避：跳过时最强员工输了
     dodgeTotal: 0,    // 精准闪避：总跳过局数
-    comebackMin: null // 起死回生：筹码跌破初始后的最低值（null=未跌破）
+    comebackMin: null, // 起死回生：筹码跌破初始后的最低值（null=未跌破）
+    obsNoDoukou: 0,   // 观察者押注的员工无斗口次数
+    obsLowerPts: 0    // 观察者押注的员工点数小的次数
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -298,6 +337,7 @@ function placeBet(target, amount) {
     game.stats.totalStaked += amount;
     game.stats.betTargetCount[target]++;
     game.stats.stakeCount[amount] = (game.stats.stakeCount[amount] || 0) + 1;
+    if (!game.stats.stakePnl[amount]) game.stats.stakePnl[amount] = 0;
   }
 
   // Reveal
@@ -328,6 +368,24 @@ function placeBet(target, amount) {
       else game.stats.lose++;
     }
   
+    // 观察者下注后的损因统计
+    if (game.currentBet.target !== 'SKIP') {
+      const betEr = settlement.employeeResults[game.currentBet.target];
+      if (betEr && !betEr.won) {
+        if (betEr.reason && (betEr.reason === '员工无斗口' || betEr.reason === '双方无斗口')) {
+          game.stats.obsNoDoukou++;
+        }
+        if (betEr.reason && betEr.reason.includes('老板点数更大')) {
+          game.stats.obsLowerPts++;
+        }
+      }
+      // 注码收益追踪
+      const stakeKey = game.currentBet.amount;
+      if (game.stats.stakePnl[stakeKey] !== undefined) {
+        game.stats.stakePnl[stakeKey] += observerPnl;
+      }
+    }
+
     // 统计平吃：庄家平吃各玩家（分数相同或双方无斗口）
     for (const lbl of ['A', 'B', 'C']) {
       const er = settlement.employeeResults[lbl];
@@ -341,15 +399,9 @@ function placeBet(target, amount) {
       }
     }
   
-    // 精准闪避统计：只有没有任何员工强于老板时，才计入统计
+    // 精准闪避统计（新规则）：所有PASS局都计入，最强员工输了则闪避成功
     if (game.currentBet.target === 'SKIP') {
-      // 计算老板战力
-      const bossV = [game.hands[0][0], game.hands[0][1]];
-      const bossInfo = lookupTier(bossV[0], bossV[1]);
-      const bossPower = bossInfo ? bossInfo.mp : 30;
-      
-      // 检查是否有员工强于老板，同时找出最强员工
-      let hasStrongerEmp = false;
+      // 找出战力最强的员工
       let strongestEmp = null;
       let strongestPower = -999;
       for (const lbl of ['A', 'B', 'C']) {
@@ -357,19 +409,14 @@ function placeBet(target, amount) {
         const v = [game.hands[idx][0], game.hands[idx][1]];
         const info = lookupTier(v[0], v[1]);
         const power = info ? info.mp : 30;
-        if (power > bossPower) hasStrongerEmp = true;
         if (power > strongestPower) {
           strongestPower = power;
           strongestEmp = lbl;
         }
       }
-      
-      // 没有员工强于老板时，才计入闪避统计
-      if (!hasStrongerEmp) {
-        game.stats.dodgeTotal++;
-        if (strongestEmp && !settlement.employeeResults[strongestEmp].won) {
-          game.stats.dodgeCorrect++;
-        }
+      game.stats.dodgeTotal++;
+      if (strongestEmp && !settlement.employeeResults[strongestEmp].won) {
+        game.stats.dodgeCorrect++;
       }
     }
 
@@ -780,6 +827,7 @@ function analyzeSession() {
     skipRounds: skipRounds.length,
     betWinRate,
     byStake,
+    stakePnl: game.stats.stakePnl,
     passRate,
     passBossAllWin,
     pass1EmpWin,
@@ -789,6 +837,9 @@ function analyzeSession() {
     empOverall,
     netPnl: game.obsPurse - INITIAL_PURSE,
     dodgeCorrect: game.stats.dodgeCorrect,
-    dodgeTotal: game.stats.dodgeTotal
+    dodgeTotal: game.stats.dodgeTotal,
+    obsNoDoukou: game.stats.obsNoDoukou,
+    obsLowerPts: game.stats.obsLowerPts,
+    obsFlatEat: game.stats.flatEat.obs
   };
 }
