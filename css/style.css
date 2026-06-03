@@ -1130,7 +1130,9 @@ html, body {
   border-radius: 20px 20px 0 0;
   width: 100%;
   max-height: calc(100vh - 40px);
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: slideUp 0.25s ease-out;
   box-shadow: var(--shadow-lg);
 }
@@ -1141,10 +1143,8 @@ html, body {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
   background: var(--bg2);
-  z-index: 1;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -1168,6 +1168,9 @@ html, body {
 
 .modal-body {
   padding: 12px 20px 32px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .analysis-section {
@@ -1516,7 +1519,7 @@ html, body {
    Quiz Modal
 ═══════════════════════════════════════════════════ */
 #quiz-modal .modal-content {
-  max-height: 92vh;
+  max-height: calc(100vh - 40px);
 }
 .quiz-mode-tabs {
   display: flex;
