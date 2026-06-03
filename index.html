@@ -1031,14 +1031,9 @@
         html += `<div class="action-eval-row">`;
         html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
         html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
-        // 精准闪避即时反馈：SKIP时，只有没有员工强于老板才显示标签
+        // 精准闪避即时反馈（新规则）：SKIP时，始终显示闪避/错失标签
         if (game.currentBet.target === 'SKIP') {
-          // 计算老板战力
-          const bossV = [game.hands[0][0], game.hands[0][1]];
-          const bossInfo = lookupTier(bossV[0], bossV[1]);
-          const bossPower = bossInfo ? bossInfo.mp : 30;
-          // 检查是否有员工强于老板，同时找出最强员工
-          let hasStrongerEmp = false;
+          // 找出战力最强的员工
           let strongestEmp = null;
           let strongestPower = -999;
           for (const lbl of ['A', 'B', 'C']) {
@@ -1046,14 +1041,13 @@
             const v = [game.hands[idx][0], game.hands[idx][1]];
             const info = lookupTier(v[0], v[1]);
             const power = info ? info.mp : 30;
-            if (power > bossPower) hasStrongerEmp = true;
             if (power > strongestPower) {
               strongestPower = power;
               strongestEmp = lbl;
             }
           }
-          // 没有员工强于老板时才显示闪避/错失标签
-          if (!hasStrongerEmp && strongestEmp) {
+          // 所有SKIP局都显示闪避/错失标签
+          if (strongestEmp) {
             const er = settlement.employeeResults[strongestEmp];
             const dodgeOk = er && !er.won;
             html += `<span class="action-tag ${dodgeOk ? 'tag-rational' : 'tag-aggressive'}" style="margin-left:4px">${dodgeOk ? '精准闪避' : '错失良机'}</span>`;
@@ -1287,11 +1281,33 @@
       }
       
       const grid = document.getElementById('stats-grid');
+
+      // 注码收益行
+      let stakePnlHtml = '';
+      for (const s of [4, 8, 12, 16]) {
+        const pnl = game.stats.stakePnl[s] || 0;
+        const cnt = game.stats.stakeCount[s] || 0;
+        if (pnl !== 0 || cnt > 0) {
+          stakePnlHtml += `<div class="stat-card ${pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}">
+            <div class="stat-label">$${s}注收益</div>
+            <div class="stat-value">${pnl > 0 ? '+' : ''}${pnl}</div>
+            <div class="stat-shadow">${cnt}局</div>
+          </div>`;
+        }
+      }
+
+      // 员工胜率
+      const _analysis = analyzeSession();
+      const _fmtEmp = (d) => d.total > 0 ? (d.wins / d.total * 100).toFixed(0) + '%' : '-';
+      const empWinRatesStr = _analysis
+        ? _fmtEmp(_analysis.empOverall.A) + '/' + _fmtEmp(_analysis.empOverall.B) + '/' + _fmtEmp(_analysis.empOverall.C)
+        : '-/-/-';
+
       grid.innerHTML = `
         <div class="stat-card highlight">
           <div class="stat-label">最终筹码</div>
           <div class="stat-value">$${game.obsPurse}</div>
-          <div class="stat-shadow">$${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
+          <div class="stat-shadow">影子 $${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
         </div>
         <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
           <div class="stat-label">净盈亏</div>
@@ -1303,6 +1319,21 @@
         ${sc(winRate + '%', shadowWinRate + '%', '胜率')}
         ${sc(roi + '%', shadowRoi + '%', 'ROI')}
         ${sc(game.stats.win + '/' + game.stats.lose, shadow.win + '/' + shadow.lose, '胜/负')}
+        <div class="stat-card">
+          <div class="stat-label">员工A/B/C胜率</div>
+          <div class="stat-value">${empWinRatesStr}</div>
+          <div class="stat-shadow">全场统计</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">无斗口</div>
+          <div class="stat-value">${game.stats.obsNoDoukou}局</div>
+          <div class="stat-shadow">我方无口</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">点数小</div>
+          <div class="stat-value">${game.stats.obsLowerPts}局</div>
+          <div class="stat-shadow">我方点低</div>
+        </div>
         <div class="stat-card">
           <div class="stat-label">平吃</div>
           <div class="stat-value">${game.stats.flatEat.obs}局</div>
@@ -1323,6 +1354,7 @@
           <div class="stat-value">${(netPnl > 0 && game.stats.comebackMin !== null) ? '$' + game.stats.comebackMin : '-'}</div>
           <div class="stat-shadow">${(netPnl > 0 && game.stats.comebackMin !== null) ? '从$' + game.stats.comebackMin + '翻盘' : '无'}</div>
         </div>
+        ${stakePnlHtml}
       `;
 
       // 出手规范分析总结
@@ -1825,6 +1857,18 @@
         </div>`;
       }
 
+      let stakePnlRows = '';
+      for (const s of [4, 8, 12, 16]) {
+        const pnl = a.stakePnl[s] || 0;
+        const cnt = a.byStake[s];
+        if (pnl !== 0 || cnt) {
+          stakePnlRows += `<div class="analysis-row">
+            <span class="analysis-label">$${s}注收益</span>
+            <span class="analysis-value ${pnl >= 0 ? 'positive' : 'negative'}">${pnl > 0 ? '+' : ''}${pnl}</span>
+          </div>`;
+        }
+      }
+
       body.innerHTML = `
         <div class="analysis-section">
           <div class="analysis-section-title">择时 vs 自然胜率</div>
@@ -1847,6 +1891,20 @@
             <span class="analysis-value ${a.netPnl >= 0 ? 'positive' : 'negative'}">${a.netPnl >= 0 ? '+' : ''}${a.netPnl}</span>
           </div>
           ${stakeRows ? `<div class="analysis-row" style="margin-top:4px"><span class="analysis-label" style="font-weight:600">注码胜率</span></div>${stakeRows}` : ''}
+          ${stakePnlRows ? `<div class="analysis-row" style="margin-top:4px"><span class="analysis-label" style="font-weight:600">注码收益</span></div>${stakePnlRows}` : ''}
+          <div class="analysis-row" style="margin-top:4px"><span class="analysis-label" style="font-weight:600">我方损因</span></div>
+          <div class="analysis-row">
+            <span class="analysis-label">无斗口</span>
+            <span class="analysis-value">${a.obsNoDoukou}局</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">点数小</span>
+            <span class="analysis-value">${a.obsLowerPts}局</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">被平吃</span>
+            <span class="analysis-value">${a.obsFlatEat}局</span>
+          </div>
         </div>
 
         <div class="analysis-section">
