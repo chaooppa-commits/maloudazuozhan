@@ -353,9 +353,8 @@ html, body {
 /* Card table */
 /* ── 3b. 牌桌: Boss + A/B/C 四家手牌展示区 ────────── */
 .card-table {
-  flex: 1;
+  flex: 0 1 auto;
   padding: 12px;
-  overflow-y: auto;
 }
 
 .player-row {
@@ -570,6 +569,7 @@ html, body {
 /* ── 3c. 结果区: 本局胜负/盈亏/行动评估展示 ────────── */
 .result-section {
   display: none;
+  margin-top: 12px; 
   padding: 12px;
 }
 
