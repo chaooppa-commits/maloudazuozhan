@@ -14,10 +14,10 @@
   --bg: #0a0a0c;
   --bg2: #141416;
   --card-bg: #1e1e20;
-  --accent: #f43f5e;
+  --accent: #FBA425;
   --green: #10b981;
-  --gold: #fbbf24;
-  --blue: #3b82f6;
+  --gold: #DFB823;
+  --blue: #EE00FF;
   --text: #f3f4f6;
   --text-dim: #9ca3af;
   --danger: #ef4444;
@@ -36,10 +36,10 @@
   --bg: #f5f5f7;
   --bg2: #ffffff;
   --card-bg: #e8e8ec;
-  --accent: #e11d48;
+  --accent: #c47f0a;
   --green: #059669;
-  --gold: #d97706;
-  --blue: #2563eb;
+  --gold: #a17817;
+  --blue: #b800c7;
   --text: #1a1a2e;
   --text-dim: #6b7280;
   --danger: #dc2626;
@@ -123,9 +123,9 @@ html, body {
 }
 
 .mode-btn.active {
-  border-color: var(--blue);
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--blue);
+  border-color: #EE00FF;
+  background: rgba(238, 0, 255, 0.12);
+  color: #EE00FF;
 }
 
 .mode-btn .mode-desc {
@@ -147,7 +147,7 @@ html, body {
 }
 
 .seed-input:focus {
-  border-color: var(--blue);
+  border-color: #EE00FF;
 }
 
 /* 荷包小字行 */
@@ -158,7 +158,7 @@ html, body {
 }
 .wallet-inline span {
   font-weight: 700;
-  color: var(--blue);
+  color: #EE00FF;
 }
 /* 验证码提示 */
 .pincode-hint {
@@ -191,9 +191,9 @@ html, body {
   text-align: center;
 }
 .auth-tab.active {
-  border-color: var(--blue);
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--blue);
+  border-color: #EE00FF;
+  background: rgba(238, 0, 255, 0.12);
+  color: #EE00FF;
 }
 .auth-panel {
   display: none;
@@ -243,7 +243,7 @@ html, body {
   padding: 16px;
   border: none;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, #FBA425, #DFB823);
+  background: linear-gradient(135deg, #FBA425, #92710e);
   color: white;
   font-size: 1.2rem;
   font-weight: 700;
@@ -502,9 +502,9 @@ html, body {
 
 .tier-S\+ { background: rgba(251,191,36,0.15); color: var(--gold); }
 .tier-S { background: rgba(251,191,36,0.1); color: #d97706; }
-.tier-A { background: rgba(59,130,246,0.12); color: var(--blue); }
+.tier-A { background: rgba(238,0,255,0.12); color: var(--blue); }
 .tier-B { background: rgba(16,185,129,0.12); color: var(--green); }
-.tier-C { background: rgba(244,63,94,0.1); color: var(--accent); }
+.tier-C { background: rgba(251,164,37,0.1); color: var(--accent); }
 
 .blessing-hint {
   font-size: 0.65rem;
@@ -592,9 +592,9 @@ html, body {
 }
 
 .result-banner.lose {
-  background: rgba(244,63,94,0.1);
+  background: rgba(251,164,37,0.1);
   color: var(--accent);
-  border: 1px solid rgba(244,63,94,0.2);
+  border: 1px solid rgba(251,164,37,0.2);
 }
 
 .result-banner.skip {
@@ -711,7 +711,7 @@ html, body {
 }
 
 .bet-btn.btn-a {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, #EE00FF, #a300b3);
   color: white;
 }
 
@@ -733,9 +733,9 @@ html, body {
 }
 
 .bet-btn.btn-run {
-  background: rgba(244,63,94,0.1);
+  background: rgba(251,164,37,0.1);
   color: var(--accent);
-  border: 1px solid rgba(244,63,94,0.2);
+  border: 1px solid rgba(251,164,37,0.2);
   flex: 1;
 }
 
@@ -935,9 +935,9 @@ html, body {
 }
 
 .end-btn.primary {
-  background: linear-gradient(135deg, #92710e, #e1ca1d);
+  background: linear-gradient(135deg, #FBA425, #92710e);
   color: white;
-  box-shadow: 0 4px 12px rgba(244,63,94,0.25);
+  box-shadow: 0 4px 12px rgba(251, 164, 37, 0.25);
 }
 
 .end-btn.secondary {
@@ -958,7 +958,7 @@ html, body {
   cursor: pointer;
 }
 .result-action-btn.primary {
-  background: linear-gradient(135deg, #FBA425, #DFB823);
+  background: linear-gradient(135deg, #FBA425, #92710e);
   color: white;
   box-shadow: 0 4px 12px rgba(251, 164, 37, 0.25);
 }
@@ -1081,9 +1081,9 @@ html, body {
 }
 
 .action-tag.tag-aggressive {
-  background: rgba(244, 63, 94, 0.12);
+  background: rgba(251, 164, 37, 0.12);
   color: var(--accent);
-  border: 1px solid rgba(244, 63, 94, 0.2);
+  border: 1px solid rgba(251, 164, 37, 0.2);
 }
 
 .action-tag.tag-conservative {
@@ -1320,9 +1320,9 @@ html, body {
 /* 将旧 S+/S/A/B/C 标签保留，新增数字星级 */
 .tier-5 { background: rgba(251,191,36,0.18); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
 .tier-4 { background: rgba(251,191,36,0.10); color: #d97706; border: 1px solid rgba(217,119,6,0.25); }
-.tier-3 { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.25); }
+.tier-3 { background: rgba(238,0,255,0.12); color: var(--blue); border: 1px solid rgba(238,0,255,0.25); }
 .tier-2 { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
-.tier-1 { background: rgba(244,63,94,0.10); color: var(--accent); border: 1px solid rgba(244,63,94,0.2); }
+.tier-1 { background: rgba(251,164,37,0.10); color: var(--accent); border: 1px solid rgba(251,164,37,0.2); }
 
 /* PnL 图表行（图+战力表按钮） */
 /* ── 3g. 游戏中PnL曲线(canvas+右侧标签+工具按钮) ────── */
@@ -1370,9 +1370,9 @@ html, body {
 
 /* $16 大注按钮 - 警示色 */
 .bet-btn.btn-stake-max {
-  border-color: rgba(244,63,94,0.5);
+  border-color: rgba(251,164,37,0.5);
   color: var(--accent);
-  background: rgba(244,63,94,0.07);
+  background: rgba(251,164,37,0.07);
 }
 .bet-btn.btn-stake-max:active { border-color: var(--accent); }
 
@@ -1490,7 +1490,7 @@ html, body {
 }
 
 [data-theme="light"] .start-btn {
-  background: linear-gradient(135deg, var(--accent), #be123c);
+  background: linear-gradient(135deg, #c47f0a, #6b4a08);
 }
 
 [data-theme="light"] .player-row.result-win {
@@ -1661,9 +1661,9 @@ html, body {
   color: var(--text-dim);
   margin-top: 2px;
 }
-.quiz-option.selected { border-color: var(--blue); background: rgba(59,130,246,0.12); color: var(--blue); }
+.quiz-option.selected { border-color: var(--blue); background: rgba(238,0,255,0.12); color: var(--blue); }
 .quiz-option.correct  { border-color: var(--green); background: rgba(16,185,129,0.15); color: var(--green); }
-.quiz-option.wrong    { border-color: var(--accent); background: rgba(244,63,94,0.12); color: var(--accent); }
+.quiz-option.wrong    { border-color: var(--accent); background: rgba(251,164,37,0.12); color: var(--accent); }
 .quiz-pairs-row {
   display: flex;
   gap: 10px;
@@ -1735,7 +1735,7 @@ html, body {
 }
 .quiz-tier-opt.used    { opacity: 0.35; }
 .quiz-tier-opt.correct { border-color: var(--green); background: rgba(16,185,129,0.15); color: var(--green); }
-.quiz-tier-opt.wrong   { border-color: var(--accent); background: rgba(244,63,94,0.12); color: var(--accent); }
+.quiz-tier-opt.wrong   { border-color: var(--accent); background: rgba(251,164,37,0.12); color: var(--accent); }
 .quiz-submit-btn {
   width: 100%;
   padding: 13px;
