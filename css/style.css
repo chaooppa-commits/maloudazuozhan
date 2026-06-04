@@ -569,7 +569,6 @@ html, body {
 /* ── 3c. 结果区: 本局胜负/盈亏/行动评估展示 ────────── */
 .result-section {
   display: none;
-  margin-top: 12px; 
   padding: 12px;
 }
 
@@ -942,6 +941,28 @@ html, body {
 }
 
 .end-btn.secondary {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+/* ── 3e-combo. 结果栏操作按钮(分析/下一局) 与结束页按钮等宽 ── */
+.result-action-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.result-action-btn.primary {
+  background: linear-gradient(135deg, var(--accent), #e11d48);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244,63,94,0.25);
+}
+.result-action-btn.secondary {
   background: var(--bg2);
   color: var(--text);
   border: 1px solid var(--border);
@@ -1537,56 +1558,22 @@ html, body {
   justify-content: center;
 }
 
-.review-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
+.review-card-table {
+  padding: 0 0 8px 0;
 }
-.review-row:last-of-type {
-  border-bottom: none;
+.review-card-table .player-row {
+  margin-bottom: 6px;
+  padding: 8px 10px;
 }
-.review-lbl {
-  width: 40px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  flex-shrink: 0;
+.review-result-section {
+  padding: 0;
 }
-.review-cards {
-  display: flex;
-  gap: 4px;
-  flex: 1;
+.review-result-section .result-banner {
+  margin-bottom: 6px;
 }
-.rc {
-  width: 32px; height: 38px;
-  border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.95rem; font-weight: 700;
-  background: var(--card-bg);
-  color: var(--text);
+.review-result-section .action-eval-row {
+  margin-bottom: 0;
 }
-.review-result {
-  font-size: 0.8rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  width: 32px;
-  text-align: center;
-}
-.review-result.rw { color: var(--green); }
-.review-result.rl { color: var(--accent); }
-.review-row.rw { background: rgba(16,185,129,0.06); border-radius: 6px; padding: 8px 6px; }
-.review-row.rl { background: rgba(244,63,94,0.06); border-radius: 6px; padding: 8px 6px; }
-
-.review-pnl {
-  text-align: center;
-  font-size: 1.4rem;
-  font-weight: 800;
-  margin-top: 12px;
-}
-.review-pnl.rw { color: var(--green); }
-.review-pnl.rl { color: var(--accent); }
 
 /* ═══════════════════════════════════════════════════
    Quiz Modal
