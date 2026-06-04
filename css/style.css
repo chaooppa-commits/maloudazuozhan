@@ -243,14 +243,14 @@ html, body {
   padding: 16px;
   border: none;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, #92710e, #e1ca1d);
+  background: linear-gradient(135deg, #FBA425, #DFB823);
   color: white;
   font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
   margin-top: 12px;
   transition: transform 0.1s;
-  box-shadow: 0 4px 12px rgba(244, 193, 63, 0.25);
+  box-shadow: 0 4px 12px rgba(251, 164, 37, 0.25);
 }
 
 .start-btn:active {
@@ -958,9 +958,9 @@ html, body {
   cursor: pointer;
 }
 .result-action-btn.primary {
-  background: linear-gradient(135deg, var(--accent), #e1ca1d);
+  background: linear-gradient(135deg, #FBA425, #DFB823);
   color: white;
-  box-shadow: 0 4px 12px rgba(244, 193, 63, 0.25);
+  box-shadow: 0 4px 12px rgba(251, 164, 37, 0.25);
 }
 .result-action-btn.secondary {
   background: var(--bg2);
