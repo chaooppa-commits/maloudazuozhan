@@ -783,14 +783,23 @@ html, body {
   text-align: center;
 }
 
-#end-screen h2 {
-  font-size: 1.8rem;
-  margin-bottom: 4px;
+.end-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
 }
 
-#end-screen .end-subtitle {
+.end-header-row #end-title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.end-header-row .end-subtitle {
   color: var(--text-dim);
-  margin-bottom: 16px;
+  font-size: 0.75rem;
 }
 
 .end-pnl-chart-wrap {
@@ -829,7 +838,7 @@ html, body {
 }
 .stat-group-gap {
   grid-column: 1 / -1;
-  margin-top: 4px;
+  margin-top: 12px;
 }
 
 .stat-card {
