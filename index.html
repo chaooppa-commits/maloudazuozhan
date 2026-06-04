@@ -1074,24 +1074,7 @@
         html += `</div>`;
       }
 
-      // 本局出手统计
-      const actionStats = getActionStats();
-      html += `<div class="action-stats">`;
-      html += `<div class="action-stats-title">本局出手规范统计</div>`;
-      html += `<div class="action-stats-grid">`;
-      for (const tag of ['理性', '冒进', '保守']) {
-        const s = actionStats[tag];
-        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
-        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
-        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
-        html += `<div class="action-stats-item">`;
-        html += `<span class="action-tag ${tagCls}">${tag}</span>`;
-        html += `<span class="action-stats-count">${s.count}局</span>`;
-        html += `<span class="action-stats-pct">IN ${betPct} | PASS ${passPct}</span>`;
-        html += `</div>`;
-      }
-      html += `</div>`;
-      html += `</div>`;
+      // 本局出手统计（已移除）
 
       section.innerHTML = html;
     }
@@ -1387,6 +1370,17 @@
         </div>`;
       }
 
+      // 下注收益卡片辅助函数
+      function _stakeCard(s) {
+        const pnl = game.stats.stakePnl[s] || 0;
+        const cnt = game.stats.stakeCount[s] || 0;
+        return `<div class="stat-card ${pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}">
+          <div class="stat-label">下注${s}</div>
+          <div class="stat-value">${cnt > 0 ? (pnl > 0 ? '+' : '') + pnl : '-'}</div>
+          <div class="stat-shadow">${cnt}局</div>
+        </div>`;
+      }
+
       // 分组分隔符
       const GAP = '<div class="stat-group-gap"></div>';
 
@@ -1460,20 +1454,9 @@
           <div class="stat-shadow">极值差≥20</div>
         </div>
         ${GAP}
-        ${[4,8,12,16].map(s => {
-          const pnl = game.stats.stakePnl[s] || 0;
-          const cnt = game.stats.stakeCount[s] || 0;
-          return `<div class="stat-card ${pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}">
-            <div class="stat-label">下注${s}</div>
-            <div class="stat-value">${cnt > 0 ? (pnl > 0 ? '+' : '') + pnl : '-'}</div>
-            <div class="stat-shadow">${cnt}局</div>
-          </div>`;
-        }).join('')}
-        ${GAP}
-        ${_actionCard('理性', actionStats['理性'], 'tag-rational', true)}
-        ${_actionCard('冒进', actionStats['冒进'], 'tag-aggressive', true)}
-        ${_actionCard('保守', actionStats['保守'], 'tag-conservative', true)}
-        ${_actionCard('龟缩', actionStats['龟缩'], 'tag-conservative', false)}
+        ${_stakeCard(4)}${_stakeCard(8)}${_stakeCard(12)}
+        ${_stakeCard(16)}${_actionCard('理性', actionStats['理性'], 'tag-rational', true)}${_actionCard('冒进', actionStats['冒进'], 'tag-aggressive', true)}
+        ${_actionCard('保守', actionStats['保守'], 'tag-conservative', true)}<div class="stat-card stat-card-empty"></div>${_actionCard('龟缩', actionStats['龟缩'], 'tag-conservative', false)}
       `;
 
       // 出手规范已合入 stats-grid，隐藏旧区域
