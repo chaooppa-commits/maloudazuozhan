@@ -806,7 +806,7 @@ html, body {
   display: flex;
   align-items: stretch;
   max-width: 360px;
-  margin-bottom: 20px;
+  margin-bottom: 4px;
 }
 .end-pnl-chart-wrap .pnl-labels {
   font-size: 10px;
@@ -843,7 +843,7 @@ html, body {
 .stat-card {
   padding: 6px 8px;
   background: var(--bg2);
-  border-radius: var(--radius);
+  border-radius: 2px;
   border: none;
   text-align: center;
 }
