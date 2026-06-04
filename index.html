@@ -620,17 +620,23 @@
     // ═══════════════════════════════════════════════════════
     // Shadow Player (影子选手)
     // ═══════════════════════════════════════════════════════
-    const SHADOW_EXIT_THRESHOLD = 6; // 影子退场阈値：庄家开局筹码 - 影子净胜筹码 <= 6 时退场
+    const SHADOW_EXIT_OBS_RATIO = 0.4;  // 影子退场：影子筹码 ≤ 出场筹码的40%时退场
+    const SHADOW_EXIT_BOSS_RATIO = 0.2; // 影子退场：老板筹码 ≤ 出场筹码的20%时退场
 
     const shadow = {
       purse: INITIAL_PURSE,
+      bossPurse: INITIAL_PURSE,  // 影子对局的独立老板筹码
       bet: 0, skip: 0, win: 0, lose: 0, totalStaked: 0,
       exited: false,
       pnlHistory: [0]
     };
 
+    // 影子初始筹码与观察者同步（在 startGame 前设好默认值）
+
     function shadowReset() {
-      shadow.purse = INITIAL_PURSE;
+      const ip = (typeof game !== 'undefined' && game._initialPurse) ? game._initialPurse : INITIAL_PURSE;
+      shadow.purse = ip;
+      shadow.bossPurse = ip;  // 影子老板筹码与出场金额同步
       shadow.bet = 0; shadow.skip = 0;
       shadow.win = 0; shadow.lose = 0;
       shadow.totalStaked = 0;
@@ -668,15 +674,19 @@
      * 影子选手决策函数
      * 返回 { target, amount } 或 { target: 'SKIP', amount: 0 }
      */
-    function shadowDecide(hands, shadowPurse, bossPurse) {
+    function shadowDecide(hands, shadowPurse, shadowBossPurse) {
       // 🛡️ 防御：hands 为空或长度不足时直接跳过
       if (!hands || hands.length < 4 || !hands[0] || !hands[1] || !hands[2] || !hands[3]) {
         return { target: 'SKIP', amount: 0 };
       }
 
-      // 影子退场：庄家开局筹码 - 影子净胜筹码 <= 阈値
-      const shadowNetWin = shadowPurse - INITIAL_PURSE;
-      if ((INITIAL_PURSE - shadowNetWin) <= SHADOW_EXIT_THRESHOLD) {
+      const initialPurse = game._initialPurse || INITIAL_PURSE;
+      // 影子退场规则1：影子筹码 ≤ 出场筹码的40%
+      if (shadowPurse <= initialPurse * SHADOW_EXIT_OBS_RATIO) {
+        return { target: 'RUN', amount: 0 };
+      }
+      // 影子退场规则2：影子老板筹码 ≤ 出场筹码的20%
+      if (shadowBossPurse <= initialPurse * SHADOW_EXIT_BOSS_RATIO) {
         return { target: 'RUN', amount: 0 };
       }
 
@@ -734,8 +744,8 @@
 
       if (stake <= 0) return { target: 'SKIP', amount: 0 };
 
-      // 不能超过老板余额和影子余额
-      stake = Math.min(stake, bossPurse, shadowPurse);
+      // 不能超过影子老板余额和影子余额
+      stake = Math.min(stake, shadowBossPurse, shadowPurse);
       if (stake < 1) return { target: 'SKIP', amount: 0 };
 
       return { target: bestTarget, amount: stake };
@@ -743,19 +753,21 @@
 
     /**
      * 在每局结算后同步影子选手的结果
-     * bossPurseAtBet 是投注时老板的笹码（影子用实际老板笹码限制）
+     * 影子选手拥有独立的 bossPurse，与观察者的 game.bossPurse 完全独立
      */
-    function shadowSettle(hands, settlement, bossPurseForCap) {
+    function shadowSettle(hands, settlement) {
       if (shadow.exited) return;
       // 🛡️ 防御：hands 或 settlement 异常时安全跳过
       if (!hands || !settlement || !settlement.employeeResults) return;
 
-      const dec = shadowDecide(hands, shadow.purse, bossPurseForCap);
+      // 影子选手使用自己的独立老板筹码进行决策
+      const dec = shadowDecide(hands, shadow.purse, shadow.bossPurse);
       game._shadowLastDec = dec; // 保存当局决策以便写入日志
 
       if (dec.target === 'RUN') {
         shadow.exited = true;
-        shadow.pnlHistory.push(shadow.purse - INITIAL_PURSE);
+        shadow.skip++; // 退场算作一次跳过统计
+        shadow.pnlHistory.push(shadow.pnlHistory[shadow.pnlHistory.length - 1]);
         return;
       }
       if (dec.target === 'SKIP' || dec.amount <= 0) {
@@ -770,14 +782,17 @@
       shadow.totalStaked += dec.amount;
       let pnl = 0;
       if (er.won) {
-        pnl = Math.min(dec.amount * er.mult, bossPurseForCap);
+        // 影子赢：从影子老板那里拿钱，上限不超过影子老板当前筹码
+        pnl = Math.min(dec.amount * er.mult, shadow.bossPurse);
         shadow.win++;
       } else {
         pnl = -dec.amount;
         shadow.lose++;
       }
       shadow.purse += pnl;
+      shadow.bossPurse -= pnl;  // 影子老板筹码反向变动
       if (shadow.purse < 0) shadow.purse = 0;
+      if (shadow.bossPurse < 0) shadow.bossPurse = 0;
       const cum = shadow.pnlHistory[shadow.pnlHistory.length - 1] + pnl;
       shadow.pnlHistory.push(cum);
     }
@@ -865,9 +880,8 @@
           _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
           game._lastSettlement = settlement;
           game._lastActionEval = actionEval;
-          // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
-          const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
-          shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
+          // 影子选手结算（使用独立的影子老板筹码）
+          shadowSettle(game.hands, settlement);
           // 把影子选手当局数据追加到最后一条 round log
           const lastLog = game.log[game.log.length - 1];
           if (lastLog && lastLog.type === 'round') {
@@ -1093,7 +1107,8 @@
           </div>
         `;
       } else if (game.phase === 'result') {
-        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0;
+        const ip = game._initialPurse || INITIAL_PURSE;
+        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0 || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2;
         if (gameOver) {
           bar.innerHTML = `
             <div class="action-row-single">
@@ -1256,14 +1271,15 @@
       // 渲染结束页面筹码曲线（需要等DOM可见后再画）
       setTimeout(renderEndPnlChart, 50);
 
-      const netPnl = game.obsPurse - INITIAL_PURSE;
+      const buyin = game._initialPurse || INITIAL_PURSE;
+      const netPnl = game.obsPurse - buyin;
 
       const totalBet = game.stats.bet;
       const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
       const roi = game.stats.totalStaked > 0 ? (netPnl / game.stats.totalStaked * 100).toFixed(0) : 0;
       
       // 影子选手数据
-      const shadowNetPnl = shadow.purse - INITIAL_PURSE;
+      const shadowNetPnl = shadow.purse - (game._initialPurse || INITIAL_PURSE);
       const shadowWinRate = shadow.bet > 0 ? (shadow.win / shadow.bet * 100).toFixed(0) : 0;
       const shadowRoi = shadow.totalStaked > 0 ? (shadowNetPnl / shadow.totalStaked * 100).toFixed(0) : 0;
       const shadowRounds = shadow.bet + shadow.skip;
@@ -1306,8 +1322,8 @@
       grid.innerHTML = `
         <div class="stat-card highlight">
           <div class="stat-label">最终筹码</div>
-          <div class="stat-value">$${game.obsPurse}</div>
-          <div class="stat-shadow">影子 $${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
+          <div class="stat-value">$${game.obsPurse} vs $${game.bossPurse}</div>
+          <div class="stat-shadow">影子 $${shadow.purse} vs 老$${shadow.bossPurse}${shadow.exited ? ' (已退)' : ''}</div>
         </div>
         <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
           <div class="stat-label">净盈亏</div>
