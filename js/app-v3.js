@@ -743,31 +743,32 @@ function evaluateAction(hands, betTarget, betAmount) {
 function getActionStats() {
   const roundLogs = game.log.filter(e => e.type === 'round');
   const stats = {
-    理性: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 },
-    冒进: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 },
-    保守: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 }
+    理性: { count: 0, obsWin: 0, obsLose: 0 },
+    冒进: { count: 0, obsWin: 0, obsLose: 0 },
+    保守: { count: 0, obsWin: 0, obsLose: 0 },
+    龟缩: { count: 0, shadowWin: 0, shadowLose: 0 }  // 该出手未出手，记录影子输/赢
   };
 
   for (const r of roundLogs) {
-    if (!r.actionEval) { console.warn('[actionStats] no actionEval', r); continue; }
+    if (!r.actionEval) continue;
     const tag = r.actionEval.tag;
-    if (!stats[tag]) { console.warn('[actionStats] unknown tag', tag); continue; }
-    stats[tag].count++;
     const isSkip = r.betTarget === 'SKIP';
-    console.log(`[actionStats] round=${r.round} tag=${tag} betTarget=${JSON.stringify(r.betTarget)} isSkip=${isSkip} empWinCount=${r.empWinCount} observerPnl=${r.observerPnl}`);
-    if (isSkip) {
-      stats[tag].passCount++;
-      const empWins = r.empWinCount || 0;
-      if (empWins <= 1) {
-        stats[tag].passWin++;
-        stats[tag].win++;
+
+    // 理性/冒进/保守：观察者下注时记录输/赢
+    if (stats[tag]) {
+      stats[tag].count++;
+      if (!isSkip) {
+        if (r.observerPnl > 0) stats[tag].obsWin++;
+        else stats[tag].obsLose++;
       }
-    } else {
-      stats[tag].betCount++;
-      if (r.observerPnl > 0) {
-        stats[tag].betWin++;
-        stats[tag].win++;
-      }
+    }
+
+    // 龟缩：观察者 SKIP，但影子会出手 → 记录影子输/赢
+    if (isSkip && r.shadow && r.shadow.target !== 'SKIP' && r.shadow.target !== 'RUN') {
+      stats['龟缩'].count++;
+      const er = r.employeeResults[r.shadow.target];
+      if (er && er.won) stats['龟缩'].shadowWin++;
+      else stats['龟缩'].shadowLose++;
     }
   }
 
