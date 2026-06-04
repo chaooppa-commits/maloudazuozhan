@@ -645,11 +645,12 @@
     }
 
     /**
-     * 计算某手牌对应的福星卡消耗档位降幅（已出现在可见牌中）
+     * 计算某手牌对应的福星卡消耗档位降幅
      *
      * 规则：
-     *  - 牌值 1：共 8 张，每消耗 2 张算 1 个"降档单位"（即需消耗 4 张才降 1 档）
-     *  - 其他牌：共 4 张，消耗 2 张即降 1 档（原规则不变）
+     *  - 每张福星卡消耗 = 降1档（牌值1按0.5计算，向下取整）
+     *  - 自己的起手牌不算消耗（如 9,2 的福星=9，自身9不计）
+     *  - 例如 boss 拿 9,2 福星=9；玩家A拿 9,3；则 boss 视角只看到 1 张 9 被消耗
      *
      * 返回值：最大档位降幅整数（0 = 不降档，1 = 降 1 档，...）
      */
@@ -658,13 +659,14 @@
       let maxTierDrop = 0;
       for (const bl of bless) {
         const x = bl.value;
-        const total = CARD_COUNTS[x] || 0;
-        const used = allVisible.filter(c => c === x).length;
-        // 阈值：每 (total/4) 张消耗算 1 个降档单位
-        // 牌值1：total=8，threshold=2，需消耗 4 张（= 2个单位）才降1档
-        // 其他：total=4，threshold=1，消耗 2 张即降1档
-        const unitSize = total / 4;          // 1张"标准单位"等于多少实际张数
-        const tierDrop = Math.floor(used / (unitSize * 2));  // 每2个标准单位降1档
+        // 场上有多少张 x 不在该玩家自己手中（自己的起手牌不算消耗）
+        let used = allVisible.filter(c => c === x).length;
+        if (a === x) used--;  // 排除自己起手牌中的 x
+        if (b === x) used--;
+        if (used < 0) used = 0;
+        // 牌值=1 按 0.5 计算，其他按 1 计算，向下取整，每 1 整数消耗降 1 档
+        const weight = (x === 1) ? 0.5 : 1;
+        const tierDrop = Math.floor(used * weight);
         if (tierDrop > maxTierDrop) maxTierDrop = tierDrop;
       }
       return maxTierDrop;
@@ -1263,6 +1265,52 @@
     }
 
     // ═══════════════════════════════════════════════════════
+    // Volatility Metric (波动指标)
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * 计算筹码曲线的波动次数
+     * - 找出全部局部极值（峰和谷）
+     * - 两个连续极值之差 >= threshold 算一次波动
+     * - 对局结束时的最终值也算一个极值
+     * - 返回 { count, extrema }
+     */
+    function _calcVolatility(pnlHistory, initialPurse) {
+      const threshold = 20;
+      if (!pnlHistory || pnlHistory.length < 3) return { count: 0, extrema: [] };
+
+      // 转换为绝对筹码
+      const vals = pnlHistory.map(p => initialPurse + p);
+
+      // 找局部极值
+      const extrema = [];
+      for (let i = 1; i < vals.length - 1; i++) {
+        if ((vals[i] >= vals[i - 1] && vals[i] >= vals[i + 1]) ||
+            (vals[i] <= vals[i - 1] && vals[i] <= vals[i + 1])) {
+          // 去重：连续等值时只取最后一个
+          if (extrema.length === 0 || Math.abs(vals[i] - extrema[extrema.length - 1].val) > 0) {
+            extrema.push({ idx: i, val: vals[i] });
+          }
+        }
+      }
+      // 最终值也算极值
+      const lastVal = vals[vals.length - 1];
+      if (extrema.length === 0 || Math.abs(lastVal - extrema[extrema.length - 1].val) > 0) {
+        extrema.push({ idx: vals.length - 1, val: lastVal });
+      }
+
+      // 统计波动次数
+      let count = 0;
+      for (let i = 1; i < extrema.length; i++) {
+        if (Math.abs(extrema[i].val - extrema[i - 1].val) >= threshold) {
+          count++;
+        }
+      }
+
+      return { count, extrema };
+    }
+
+    // ═══════════════════════════════════════════════════════
     // End Screen
     // ═══════════════════════════════════════════════════════
 
@@ -1273,6 +1321,21 @@
 
       const buyin = game._initialPurse || INITIAL_PURSE;
       const netPnl = game.obsPurse - buyin;
+
+      // 顶部信息行：玩家名 / 场次 / 时间戳
+      const username = game._username || '匿名';
+      const histKey = 'doukou_sessionno_' + username;
+      const sessionNo = parseInt(localStorage.getItem(histKey), 10) || 0;  // reportToSheets 已+1
+      const now = new Date();
+      const ts = now.getFullYear() + '/' +
+        String(now.getMonth() + 1).padStart(2, '0') + '/' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('end-title').textContent = `${username} · 第${sessionNo}场`;
+      document.getElementById('end-title').style.display = '';
+      document.getElementById('end-subtitle').textContent = ts;
+      document.getElementById('end-subtitle').style.display = '';
 
       const totalBet = game.stats.bet;
       const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
@@ -1298,47 +1361,71 @@
       
       const grid = document.getElementById('stats-grid');
 
-      // 注码收益行
-      let stakePnlHtml = '';
-      for (const s of [4, 8, 12, 16]) {
-        const pnl = game.stats.stakePnl[s] || 0;
-        const cnt = game.stats.stakeCount[s] || 0;
-        if (pnl !== 0 || cnt > 0) {
-          stakePnlHtml += `<div class="stat-card ${pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}">
-            <div class="stat-label">$${s}注收益</div>
-            <div class="stat-value">${pnl > 0 ? '+' : ''}${pnl}</div>
-            <div class="stat-shadow">${cnt}局</div>
-          </div>`;
-        }
-      }
-
-      // 员工胜率
+      // 员工胜率（不展示百分号）
       const _analysis = analyzeSession();
-      const _fmtEmp = (d) => d.total > 0 ? (d.wins / d.total * 100).toFixed(0) + '%' : '-';
+      const _fmtEmp = (d) => d.total > 0 ? (d.wins / d.total * 100).toFixed(0) : '-';
       const empWinRatesStr = _analysis
         ? _fmtEmp(_analysis.empOverall.A) + '/' + _fmtEmp(_analysis.empOverall.B) + '/' + _fmtEmp(_analysis.empOverall.C)
         : '-/-/-';
 
+      // 波动指标
+      const volatility = _calcVolatility(game.pnlHistory, buyin);
+
+      // 出手规范统计
+      const actionStats = getActionStats();
+
+      // 出手规范卡片辅助函数
+      function _actionCard(label, data, cls, isObs) {
+        const w = isObs ? data.obsWin : data.shadowWin;
+        const l = isObs ? data.obsLose : data.shadowLose;
+        const who = isObs ? '赢' + w + '/输' + l : '影赢' + w + '/输' + l;
+        return `<div class="stat-card">
+          <div class="stat-label"><span class="action-tag ${cls}">${label}</span></div>
+          <div class="stat-value">${data.count}局</div>
+          <div class="stat-shadow">${who}</div>
+        </div>`;
+      }
+
+      // 分组分隔符
+      const GAP = '<div class="stat-group-gap"></div>';
+
       grid.innerHTML = `
         <div class="stat-card highlight">
-          <div class="stat-label">最终筹码</div>
+          <div class="stat-label">筹码</div>
           <div class="stat-value">$${game.obsPurse} vs $${game.bossPurse}</div>
-          <div class="stat-shadow">影子 $${shadow.purse} vs 老$${shadow.bossPurse}${shadow.exited ? ' (已退)' : ''}</div>
+          <div class="stat-shadow">影子 $${shadow.purse} vs 老$${shadow.bossPurse}${shadow.exited ? ' (已退)' : ''}</div>
         </div>
         <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
-          <div class="stat-label">净盈亏</div>
+          <div class="stat-label">收益</div>
           <div class="stat-value">${netPnl >= 0 ? '+' : ''}${netPnl}</div>
           <div class="stat-shadow">${shadowNetPnl >= 0 ? '+' : ''}${shadowNetPnl}</div>
         </div>
-        ${sc(game.roundNo, shadowRounds, '总局数')}
-        ${sc(`${totalBet}/${game.roundNo - totalBet}`, `${shadow.bet}/${shadow.skip}`, '出手/跳过')}
-        ${sc(winRate + '%', shadowWinRate + '%', '胜率')}
-        ${sc(roi + '%', shadowRoi + '%', 'ROI')}
+        <div class="stat-card">
+          <div class="stat-label">ROI</div>
+          <div class="stat-value">${roi}%</div>
+          <div class="stat-shadow">${shadowRoi}%</div>
+        </div>
+        ${GAP}
+        ${sc(game.roundNo, shadowRounds, '总场次')}
+        ${sc(totalBet, shadow.bet, '出手')}
+        ${sc(game.roundNo - totalBet, shadow.skip, '跳过')}
+        ${GAP}
         ${sc(game.stats.win + '/' + game.stats.lose, shadow.win + '/' + shadow.lose, '胜/负')}
         <div class="stat-card">
-          <div class="stat-label">员工A/B/C胜率</div>
+          <div class="stat-label">胜率</div>
+          <div class="stat-value">${winRate}%</div>
+          <div class="stat-shadow">${shadowWinRate}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">员工胜率</div>
           <div class="stat-value">${empWinRatesStr}</div>
-          <div class="stat-shadow">全场统计</div>
+          <div class="stat-shadow">全场</div>
+        </div>
+        ${GAP}
+        <div class="stat-card">
+          <div class="stat-label">点数小</div>
+          <div class="stat-value">${game.stats.obsLowerPts}局</div>
+          <div class="stat-shadow">我方点低</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">无斗口</div>
@@ -1346,15 +1433,11 @@
           <div class="stat-shadow">我方无口</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">点数小</div>
-          <div class="stat-value">${game.stats.obsLowerPts}局</div>
-          <div class="stat-shadow">我方点低</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">平吃</div>
+          <div class="stat-label">平局</div>
           <div class="stat-value">${game.stats.flatEat.obs}局</div>
           <div class="stat-shadow">同点/同无斗口</div>
         </div>
+        ${GAP}
         <div class="stat-card ${game.stats.dodgeTotal > 0 && (game.stats.dodgeCorrect / game.stats.dodgeTotal) >= 0.5 ? 'positive' : game.stats.dodgeTotal > 0 ? 'negative' : ''}">
           <div class="stat-label">精准闪避</div>
           <div class="stat-value">${game.stats.dodgeCorrect}/${game.stats.dodgeTotal}</div>
@@ -1363,35 +1446,37 @@
         <div class="stat-card">
           <div class="stat-label">拉锯指数</div>
           <div class="stat-value">${swingIndex}</div>
-          <div class="stat-shadow">$${game.obsMinPurse} ~ $${game.obsMaxPurse}</div>
+          <div class="stat-shadow">$${game.obsMinPurse}~$${game.obsMaxPurse}</div>
         </div>
         <div class="stat-card ${(netPnl > 0 && game.stats.comebackMin !== null) ? 'positive' : ''}">
           <div class="stat-label">起死回生</div>
           <div class="stat-value">${(netPnl > 0 && game.stats.comebackMin !== null) ? '$' + game.stats.comebackMin : '-'}</div>
           <div class="stat-shadow">${(netPnl > 0 && game.stats.comebackMin !== null) ? '从$' + game.stats.comebackMin + '翻盘' : '无'}</div>
         </div>
-        ${stakePnlHtml}
+        <div class="stat-card">
+          <div class="stat-label">波动</div>
+          <div class="stat-value">${volatility.count}次</div>
+          <div class="stat-shadow">极值差≥20</div>
+        </div>
+        ${GAP}
+        ${[4,8,12,16].map(s => {
+          const pnl = game.stats.stakePnl[s] || 0;
+          const cnt = game.stats.stakeCount[s] || 0;
+          return `<div class="stat-card ${pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}">
+            <div class="stat-label">下注${s}</div>
+            <div class="stat-value">${cnt > 0 ? (pnl > 0 ? '+' : '') + pnl : '-'}</div>
+            <div class="stat-shadow">${cnt}局</div>
+          </div>`;
+        }).join('')}
+        ${GAP}
+        ${_actionCard('理性', actionStats['理性'], 'tag-rational', true)}
+        ${_actionCard('冒进', actionStats['冒进'], 'tag-aggressive', true)}
+        ${_actionCard('保守', actionStats['保守'], 'tag-conservative', true)}
+        ${_actionCard('龟缩', actionStats['龟缩'], 'tag-conservative', false)}
       `;
 
-      // 出手规范分析总结
-      const actionStats = getActionStats();
-      const summaryDiv = document.getElementById('action-summary');
-      let summaryHtml = '<div class="action-summary-title">出手规范分析</div>';
-      summaryHtml += '<div class="action-summary-grid">';
-      for (const tag of ['理性', '冒进', '保守']) {
-        const s = actionStats[tag];
-        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
-        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
-        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
-        summaryHtml += `<div class="action-summary-item">`;
-        summaryHtml += `<span class="action-tag ${tagCls}">${tag}</span>`;
-        summaryHtml += `<span class="action-summary-count">${s.count}局</span>`;
-        summaryHtml += `<span class="action-summary-pct">IN ${betPct}</span>`;
-        summaryHtml += `<span class="action-summary-pct">PASS ${passPct}</span>`;
-        summaryHtml += `</div>`;
-      }
-      summaryHtml += '</div>';
-      summaryDiv.innerHTML = summaryHtml;
+      // 出手规范已合入 stats-grid，隐藏旧区域
+      document.getElementById('action-summary').style.display = 'none';
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1442,6 +1527,8 @@
         return;
       }
 
+      const totalPoints = data.length;  // 以观察者为基准坐标系
+
       const allVals = [...data, ...shData, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
@@ -1449,18 +1536,22 @@
 
       updatePnlLabels('pnl-labels');
 
-      // Shadow curve
+      // Shadow curve（退场后延伸为水平直线，保持与观察者同一横向坐标系）
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
+        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);  // 退场后虚线
         ctx.beginPath();
-        for (let i = 0; i < shData.length; i++) {
-          const x = (i / (shData.length - 1)) * w;
-          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+        for (let i = 0; i < totalPoints; i++) {
+          // 影子数据不足时，用最后一个值延伸（水平直线）
+          const val = i < shData.length ? shData[i] : shData[shData.length - 1];
+          const x = (i / (totalPoints - 1)) * w;
+          const y = h - ((val - minVal) / range) * (h - 8) - 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Player curve
@@ -1468,7 +1559,7 @@
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = (i / (data.length - 1)) * w;
+        const x = (i / (totalPoints - 1)) * w;
         const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -1508,6 +1599,8 @@
         return;
       }
 
+      const totalPoints = data.length;  // 以观察者为基准坐标系
+
       const allVals = [...data, ...shData, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
@@ -1515,18 +1608,21 @@
 
       updatePnlLabels('end-pnl-labels');
 
-      // Shadow curve
+      // Shadow curve（退场后延伸为水平虚线）
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
+        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);
         ctx.beginPath();
-        for (let i = 0; i < shData.length; i++) {
-          const x = (i / (shData.length - 1)) * w;
-          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+        for (let i = 0; i < totalPoints; i++) {
+          const val = i < shData.length ? shData[i] : shData[shData.length - 1];
+          const x = (i / (totalPoints - 1)) * w;
+          const y = h - ((val - minVal) / range) * (h - 8) - 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Player curve
@@ -1534,7 +1630,7 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = (i / (data.length - 1)) * w;
+        const x = (i / (totalPoints - 1)) * w;
         const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
