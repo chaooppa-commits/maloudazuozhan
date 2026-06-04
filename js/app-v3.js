@@ -121,7 +121,17 @@ function reportToSheets() {
     // 新增字段：组十四 波动次数
     volatilityCount: (typeof _calcVolatility === 'function')
       ? _calcVolatility(game.pnlHistory, game._initialPurse || INITIAL_PURSE).count
-      : 0
+      : 0,
+    // 新增字段：组十五 画像指标
+    roiPct:       game._tagMetrics.roiPct,
+    avgBetPnl:    game._tagMetrics.avgBetPnl,
+    passRate:     game._tagMetrics.passRate,
+    alphaWinRate: game._tagMetrics.alphaWinRate,
+    bullyRate:    game._tagMetrics.bullyRate,
+    dodgeRate:    game._tagMetrics.dodgeRate,
+    lightPnl:     game._tagMetrics.lightPnl,
+    heavyPnl:     game._tagMetrics.heavyPnl,
+    agencyRatio:  game._tagMetrics.agencyRatio
   });
 
   // ═══ 【测试沙盒】拦截，不上报真实数据 ═══
@@ -519,6 +529,7 @@ function endGame(reason) {
   });
 
   saveLogToStorage();
+  game._tagMetrics = _computeTagMetrics();
   reportToSheets();
   renderEndScreen();
 }
@@ -856,5 +867,129 @@ function analyzeSession() {
     obsNoDoukou: game.stats.obsNoDoukou,
     obsLowerPts: game.stats.obsLowerPts,
     obsFlatEat: game.stats.flatEat.obs
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// Tag Metrics: 9个画像标签原始指标计算
+// ═══════════════════════════════════════════════════════
+
+function _computeTagMetrics() {
+  const buyin = game._initialPurse || INITIAL_PURSE;
+  const netPnl = game.obsPurse - buyin;
+  const totalRounds = game.roundNo;
+  const betRounds = game.stats.bet;
+  const skipRounds = game.stats.skip;
+  const analysis = analyzeSession();
+  const actionStats = getActionStats();
+
+  // #1 盈利能力: ROI = netPnl/buyin*100
+  const roiPct = buyin > 0 ? +(netPnl / buyin * 100).toFixed(1) : 0;
+
+  // #2 狩猎体量: 出手均收益 = netPnl / betRounds
+  const avgBetPnl = betRounds > 0 ? +(netPnl / betRounds).toFixed(1) : 0;
+
+  // #3 采样置信度: 总场次
+  // (直接使用 totalRounds)
+
+  // #4 战略定力: PASS率
+  const passRate = totalRounds > 0 ? +(skipRounds / totalRounds * 100).toFixed(1) : 0;
+
+  // #5 Alpha超额胜率: 玩家出手胜率 - 3名员工全局平均胜率
+  const obsWinRate = betRounds > 0 ? (game.stats.win / betRounds * 100) : 0;
+  const empRates = analysis ? ['A', 'B', 'C'].map(l => {
+    const e = analysis.empOverall[l];
+    return e.total > 0 ? (e.wins / e.total * 100) : 0;
+  }) : [0, 0, 0];
+  const avgEmpRate = (empRates[0] + empRates[1] + empRates[2]) / 3;
+  const alphaWinRate = +(obsWinRate - avgEmpRate).toFixed(1);
+
+  // #6 流氓度: (无斗口局 + 平局归庄局) / 总场次 * 100
+  const bullyRate = totalRounds > 0
+    ? +((game.stats.obsNoDoukou + game.stats.flatEat.obs) / totalRounds * 100).toFixed(1)
+    : 0;
+
+  // #7 防守纪律: 精准闪避率
+  const dodgeRate = game.stats.dodgeTotal > 0
+    ? +(game.stats.dodgeCorrect / game.stats.dodgeTotal * 100).toFixed(1)
+    : 0;
+
+  // #8 注码弹性: 轻量化(4+8) vs 重炮化(12+16)
+  const lightPnl = (game.stats.stakePnl[4] || 0) + (game.stats.stakePnl[8] || 0);
+  const heavyPnl = (game.stats.stakePnl[12] || 0) + (game.stats.stakePnl[16] || 0);
+
+  // #9 能动性: 正决策/(正决策+负决策)
+  const posDecisions = actionStats['冒进'].obsWin + actionStats['保守'].obsLose + actionStats['龟缩'].shadowLose;
+  const negDecisions = actionStats['冒进'].obsLose + actionStats['保守'].obsWin + actionStats['龟缩'].shadowWin;
+  const totalDecisions = posDecisions + negDecisions;
+  const agencyRatio = totalDecisions > 0 ? +(posDecisions / totalDecisions).toFixed(3) : 0;
+
+  return {
+    roiPct, avgBetPnl, totalRounds, passRate, alphaWinRate,
+    bullyRate, dodgeRate, lightPnl, heavyPnl, agencyRatio
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// Tag Mapping: 原始指标 → 标签文本+颜色
+// ═══════════════════════════════════════════════════════
+
+function _mapTags(m) {
+  // #1 盈利能力
+  let profitTag;
+  if (m.roiPct > 30)       profitTag = { label: '获利', color: 'positive' };
+  else if (m.roiPct >= -10) profitTag = { label: '持平', color: 'neutral' };
+  else                      profitTag = { label: '亏损', color: 'negative' };
+
+  // #2 狩猎体量
+  let huntTag;
+  if (m.avgBetPnl > 4)       huntTag = { label: '收割', color: 'positive' };
+  else if (m.avgBetPnl > 2)  huntTag = { label: '搬砖', color: 'positive' };
+  else if (m.avgBetPnl >= 0) huntTag = { label: '捡芝麻', color: 'neutral' };
+  else if (m.avgBetPnl >= -4) huntTag = { label: '车裂', color: 'negative' };
+  else                       huntTag = { label: '剐刑', color: 'negative' };
+
+  // #3 采样置信度
+  let lengthTag;
+  if (m.totalRounds <= 30)      lengthTag = { label: '短局', color: 'negative' };
+  else if (m.totalRounds <= 50) lengthTag = { label: '中局', color: 'neutral' };
+  else                          lengthTag = { label: '长局', color: 'positive' };
+
+  // #4 战略定力
+  let passTag;
+  if (m.passRate > 60)       passTag = { label: '观察', color: 'positive' };
+  else if (m.passRate >= 45) passTag = { label: '手痒', color: 'neutral' };
+  else                       passTag = { label: '手欠', color: 'negative' };
+
+  // #5 Alpha超额胜率
+  let alphaTag;
+  if (m.alphaWinRate > 10)       alphaTag = { label: '强胜率', color: 'positive' };
+  else if (m.alphaWinRate >= 5)  alphaTag = { label: '中胜率', color: 'neutral' };
+  else                           alphaTag = { label: '弱胜率', color: 'negative' };
+
+  // #6 流氓度
+  let bullyTag;
+  if (m.bullyRate > 30) bullyTag = { label: '流氓局', color: 'negative' };
+  else                  bullyTag = { label: '温和局', color: 'positive' };
+
+  // #7 防守纪律
+  let defenseTag;
+  if (m.dodgeRate >= 55) defenseTag = { label: '强防守', color: 'positive' };
+  else                   defenseTag = { label: '弱防守', color: 'negative' };
+
+  // #8 注码弹性
+  let stakeTag;
+  if (m.lightPnl > m.heavyPnl)      stakeTag = { label: '小注', color: 'positive' };
+  else if (m.heavyPnl > m.lightPnl) stakeTag = { label: '大注', color: 'positive' };
+  else                               stakeTag = { label: '小注', color: 'neutral' };
+
+  // #9 能动性
+  let agencyTag;
+  if (m.agencyRatio >= 0.5) agencyTag = { label: '正能动', color: 'positive' };
+  else                      agencyTag = { label: '负能动', color: 'negative' };
+
+  return {
+    profitTag, huntTag, lengthTag, passTag,
+    alphaTag, bullyTag, defenseTag, stakeTag, agencyTag
   };
 }
