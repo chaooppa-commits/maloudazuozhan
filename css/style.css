@@ -935,7 +935,7 @@ html, body {
 }
 
 .end-btn.primary {
-  background: linear-gradient(135deg, var(--accent), #e11d48);
+  background: linear-gradient(135deg, var(--accent), #e1ca1d);
   color: white;
   box-shadow: 0 4px 12px rgba(244,63,94,0.25);
 }
@@ -958,7 +958,7 @@ html, body {
   cursor: pointer;
 }
 .result-action-btn.primary {
-  background: linear-gradient(135deg, var(--accent), #e11d48);
+  background: linear-gradient(135deg, var(--accent), #e1ca1d);
   color: white;
   box-shadow: 0 4px 12px rgba(244,63,94,0.25);
 }
