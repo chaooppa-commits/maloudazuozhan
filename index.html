@@ -1373,7 +1373,14 @@
       // 分组分隔符
       const GAP = '<div class="stat-group-gap"></div>';
 
+      // 画像标签计算
+      const tagMetrics = _computeTagMetrics();
+      const tags = _mapTags(tagMetrics);
+      function _pt(t) { return `<span class="profile-tag ${t.color}">${t.label}</span>`; }
+      const TAGROW = (arr) => `<div class="tag-row">${arr.map(_pt).join('')}</div>`;
+
       grid.innerHTML = `
+        ${TAGROW([tags.profitTag, tags.huntTag])}
         <div class="stat-card highlight">
           <div class="stat-label">筹码</div>
           <div class="stat-value">$${game.obsPurse} vs $${game.bossPurse}</div>
@@ -1390,10 +1397,12 @@
           <div class="stat-shadow">${shadowRoi}%</div>
         </div>
         ${GAP}
+        ${TAGROW([tags.lengthTag, tags.passTag])}
         ${sc(game.roundNo, shadowRounds, '总场次')}
         ${sc(totalBet, shadow.bet, '出手')}
         ${sc(game.roundNo - totalBet, shadow.skip, '跳过')}
         ${GAP}
+        ${TAGROW([tags.alphaTag, tags.bullyTag, tags.defenseTag])}
         ${sc(game.stats.win + '/' + game.stats.lose, shadow.win + '/' + shadow.lose, '胜/负')}
         <div class="stat-card">
           <div class="stat-label">胜率</div>
@@ -1443,6 +1452,7 @@
           <div class="stat-shadow">极值差≥20</div>
         </div>
         ${GAP}
+        ${TAGROW([tags.stakeTag, tags.agencyTag])}
         ${_stakeCard(4)}${_stakeCard(8)}${_stakeCard(12)}
         ${_stakeCard(16)}<div class="stat-card"><div class="stat-label">&nbsp;</div><div class="stat-value">-</div><div class="stat-shadow">&nbsp;</div></div>${_actionCard('理性', actionStats['理性'], 'tag-rational', true)}
         ${_actionCard('冒进', actionStats['冒进'], 'tag-aggressive', true)}${_actionCard('保守', actionStats['保守'], 'tag-conservative', true)}${_actionCard('龟缩', actionStats['龟缩'], 'tag-conservative', false)}
