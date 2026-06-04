@@ -876,6 +876,36 @@ html, body {
   grid-column: 1 / -1;
 }
 
+/* ── 4d-tag. 画像标签行(横跨3列, 内含pill标签) ────── */
+.tag-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+.profile-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+}
+.profile-tag.positive {
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+}
+.profile-tag.neutral {
+  background: rgba(156,163,175,0.15);
+  color: var(--text-dim);
+}
+.profile-tag.negative {
+  background: rgba(251,164,37,0.12);
+  color: var(--accent);
+}
+
 
 /* ── 4e. 统计卡片: label/value/shadow三层结构 ──────── */
 .stat-card {
