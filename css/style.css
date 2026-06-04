@@ -792,6 +792,8 @@ html, body {
   gap: 8px;
   font-size: 0.8rem;
   margin-bottom: 10px;
+  align-self: stretch;
+  max-width: 400px;
 }
 
 .end-header-row #end-title {
@@ -808,7 +810,7 @@ html, body {
   display: flex;
   align-items: stretch;
   max-width: 360px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 .end-pnl-chart-wrap .pnl-labels {
   font-size: 10px;
