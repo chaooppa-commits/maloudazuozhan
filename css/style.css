@@ -827,12 +827,16 @@ html, body {
   max-width: 400px;
   margin-bottom: 16px;
 }
+.stat-group-gap {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+}
 
 .stat-card {
   padding: 6px 8px;
   background: var(--bg2);
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: none;
   text-align: center;
 }
 
@@ -856,7 +860,7 @@ html, body {
 }
 
 .stat-card.highlight {
-  border-color: var(--gold);
+  background: rgba(255,215,0,0.08);
 }
 
 .stat-card.highlight .stat-value {
@@ -1062,13 +1066,8 @@ html, body {
 /* ═══════ End Screen Action Summary ═══════ */
 .action-summary {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
   margin: 0 auto 20px;
-  padding: 14px;
-  background: var(--bg2);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
 }
 
 .action-summary-title {
