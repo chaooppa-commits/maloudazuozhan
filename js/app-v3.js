@@ -291,8 +291,12 @@ function startGame(kellyMode, seedStr, buyin) {
 
 function nextRound() {
   game.roundNo++;
-  if (game.roundNo > MAX_ROUNDS || game.obsPurse <= 0 || game.bossPurse <= 0) {
-    endGame('normal');
+  const ip = game._initialPurse || INITIAL_PURSE;
+  if (game.roundNo > MAX_ROUNDS || game.obsPurse <= 0 || game.bossPurse <= 0
+      || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2) {
+    if (game.obsPurse <= ip * 0.4 && game.obsPurse > 0) endGame('observer_low');
+    else if (game.bossPurse <= ip * 0.2 && game.bossPurse > 0) endGame('boss_low');
+    else endGame('normal');
     return;
   }
 
@@ -468,10 +472,15 @@ function placeBet(target, amount) {
     renderGameScreen(settlement, actionEval);
   
     // Check termination
+    const ip = game._initialPurse || INITIAL_PURSE;
     if (game.obsPurse <= 0) {
       setTimeout(() => endGame('observer_broke'), 1500);
+    } else if (game.obsPurse <= ip * 0.4) {
+      setTimeout(() => endGame('observer_low'), 1500);
     } else if (game.bossPurse <= 0) {
       setTimeout(() => endGame('boss_broke'), 1500);
+    } else if (game.bossPurse <= ip * 0.2) {
+      setTimeout(() => endGame('boss_low'), 1500);
     }
   }, 300);
 }
@@ -489,7 +498,8 @@ function endGame(reason) {
     stats: game.stats,
     shadow: typeof shadow !== 'undefined' ? {
       finalPurse: shadow.purse,
-      netPnl: shadow.purse - (typeof INITIAL_PURSE !== 'undefined' ? INITIAL_PURSE : 50),
+      bossPurse: shadow.bossPurse,
+      netPnl: shadow.purse - (game._initialPurse || INITIAL_PURSE),
       rounds: shadow.bet + shadow.skip,
       bet: shadow.bet,
       skip: shadow.skip,
@@ -498,7 +508,7 @@ function endGame(reason) {
       totalStaked: shadow.totalStaked,
       winRate: shadow.bet > 0 ? +(shadow.win / shadow.bet * 100).toFixed(1) : 0,
       roi: shadow.totalStaked > 0
-        ? +((shadow.purse - (typeof INITIAL_PURSE !== 'undefined' ? INITIAL_PURSE : 50)) / shadow.totalStaked * 100).toFixed(1)
+        ? +((shadow.purse - (game._initialPurse || INITIAL_PURSE)) / shadow.totalStaked * 100).toFixed(1)
         : 0,
       exited: shadow.exited
     } : null
@@ -835,7 +845,7 @@ function analyzeSession() {
     pass3EmpWin,
     passEmp10pts,
     empOverall,
-    netPnl: game.obsPurse - INITIAL_PURSE,
+    netPnl: game.obsPurse - (game._initialPurse || INITIAL_PURSE),
     dodgeCorrect: game.stats.dodgeCorrect,
     dodgeTotal: game.stats.dodgeTotal,
     obsNoDoukou: game.stats.obsNoDoukou,
