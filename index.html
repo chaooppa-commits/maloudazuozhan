@@ -138,8 +138,10 @@
 
   <!-- ═══════ End Screen ═══════ -->
   <div id="end-screen">
-    <h2 id="end-title" style="display:none">对决结束</h2>
-    <p class="end-subtitle" id="end-subtitle" style="display:none"></p>
+    <div class="end-header-row" style="display:none">
+      <span id="end-title"></span>
+      <span id="end-subtitle" class="end-subtitle"></span>
+    </div>
     <div class="end-pnl-chart-wrap">
       <div class="pnl-labels" id="end-pnl-labels"></div>
       <div class="end-pnl-chart">
@@ -1333,9 +1335,8 @@
         String(now.getHours()).padStart(2, '0') + ':' +
         String(now.getMinutes()).padStart(2, '0');
       document.getElementById('end-title').textContent = `${username} · 第${sessionNo}场`;
-      document.getElementById('end-title').style.display = '';
       document.getElementById('end-subtitle').textContent = ts;
-      document.getElementById('end-subtitle').style.display = '';
+      document.querySelector('.end-header-row').style.display = 'flex';
 
       const totalBet = game.stats.bet;
       const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
@@ -1380,7 +1381,7 @@
         const l = isObs ? data.obsLose : data.shadowLose;
         const who = isObs ? '赢' + w + '/输' + l : '影赢' + w + '/输' + l;
         return `<div class="stat-card">
-          <div class="stat-label"><span class="action-tag ${cls}">${label}</span></div>
+          <div class="stat-label">${label}</div>
           <div class="stat-value">${data.count}局</div>
           <div class="stat-shadow">${who}</div>
         </div>`;
