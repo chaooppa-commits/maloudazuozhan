@@ -1,7 +1,15 @@
-/* ═══════════════════════════════════════════════════════
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 14. Footer / Misc 尾部杂项                               ║
+   ╚══════════════════════════════════════════════════════════╝
+   ═══════════════════════════════════════════════════════
    Doukou Observer Simulator - Mobile-First Styles
    ═══════════════════════════════════════════════════════ */
 
+/* ┌─────────────────────────────────────────────────────────┐
+   │ 1. CSS Variables / Theme Tokens                        │
+   │    全局颜色、圆角、阴影、安全区域变量                     │
+   │    --radius: 卡片圆角  --safe-top/bottom: iOS安全区      │
+   └─────────────────────────────────────────────────────────┘ */
 :root {
   --bg: #0a0a0c;
   --bg2: #141416;
@@ -23,6 +31,7 @@
   --safe-top: env(safe-area-inset-top, 0px);
 }
 
+/* ── 1b. 亮色主题变量覆盖 ─────────────────────────────── */
 [data-theme="light"] {
   --bg: #f5f5f7;
   --bg2: #ffffff;
@@ -41,6 +50,7 @@
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
 }
 
+/* ── 1c. 全局重置 ─────────────────────────────────────── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -53,7 +63,10 @@ html, body {
   user-select: none;
 }
 
-/* ═══════ Start Screen ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 2. Start Screen 开始页面                                ║
+   ║    登录/注册表单、入场金额选择、模式切换按钮              ║
+   ╚══════════════════════════════════════════════════════════╝ */
 #start-screen {
   display: flex;
   flex-direction: column;
@@ -244,7 +257,11 @@ html, body {
   transform: scale(0.97);
 }
 
-/* ═══════ Game Screen ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 3. Game Screen 对局页面                                 ║
+   ║    顶部栏(top-bar)、筹码条(purse)、牌桌(card-table)     ║
+   ║    结果区(result-section)、操作栏(action-bar)            ║
+   ╚══════════════════════════════════════════════════════════╝ */
 #game-screen {
   display: none;
   flex-direction: column;
@@ -254,6 +271,7 @@ html, body {
 }
 
 /* Top bar */
+/* ── 3a. 顶部栏: 局数/出手/胜数 + 筹码条 ──────────── */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -288,6 +306,7 @@ html, body {
   margin-right: 6px;
 }
 
+/* ── 3f. 筹码显示区: 观察者vs老板进度条 ───────────── */
 .purse-display {
   display: flex;
   gap: 16px;
@@ -318,7 +337,7 @@ html, body {
   height: 4px;
   background: var(--border);
   border-radius: 2px;
-  margin-top: 3px;
+  margin-top: 8px;
   overflow: hidden;
 }
 
@@ -332,6 +351,7 @@ html, body {
 .purse-bar-fill.boss { background: var(--accent); }
 
 /* Card table */
+/* ── 3b. 牌桌: Boss + A/B/C 四家手牌展示区 ────────── */
 .card-table {
   flex: 1;
   padding: 12px;
@@ -416,6 +436,7 @@ html, body {
   flex-shrink: 0;
 }
 
+/* ── 3e. 扑克牌卡片样式(38x52px) ──────────────────── */
 .card {
   width: 38px;
   height: 52px;
@@ -546,6 +567,7 @@ html, body {
 }
 
 /* Result section */
+/* ── 3c. 结果区: 本局胜负/盈亏/行动评估展示 ────────── */
 .result-section {
   display: none;
   padding: 12px;
@@ -613,6 +635,7 @@ html, body {
 }
 
 /* Action bar */
+/* ── 3d. 操作栏: SKIP/A/B/C下注按钮 ───────────────── */
 .action-bar {
   position: fixed;
   bottom: 0;
@@ -774,7 +797,13 @@ html, body {
   transform: scale(0.95);
 }
 
-/* ═══════ End Screen ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 4. End Screen 结束/概览页面                             ║
+   ║    标题行(昵称+场次+时间戳)、PnL曲线图、统计卡片网格     ║
+   ║    分组: 筹码/收益/ROI → 场次/出手/跳过 → 胜负/胜率/员工 ║
+   ║    → 点数小/无斗口/平局 → 闪避/拉锯/起死回生/波动       ║
+   ║    → 九宫格(下注4-16 + 理性/冒进/保守/龟缩)             ║
+   ╚══════════════════════════════════════════════════════════╝ */
 #end-screen {
   display: none;
   flex-direction: column;
@@ -785,6 +814,7 @@ html, body {
   text-align: center;
 }
 
+/* ── 4a. 标题行: 昵称 · 第N场 + 时间戳, 左对齐 ──────── */
 .end-header-row {
   display: flex;
   align-items: baseline;
@@ -806,6 +836,7 @@ html, body {
   font-size: 0.75rem;
 }
 
+/* ── 4b. PnL 收益曲线图(含右侧Y轴标签) ─────────────── */
 .end-pnl-chart-wrap {
   display: flex;
   align-items: stretch;
@@ -832,6 +863,7 @@ html, body {
   display: block;
 }
 
+/* ── 4c. 统计卡片网格 3列布局 ───────────────────────── */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -840,15 +872,13 @@ html, body {
   max-width: 400px;
   margin-bottom: 16px;
 }
+/* ── 4d. 分组分隔符(横跨3列) ───────────────────────── */
 .stat-group-gap {
   grid-column: 1 / -1;
 }
 
-.stat-card-empty {
-  background: transparent;
-  visibility: hidden;
-}
 
+/* ── 4e. 统计卡片: label/value/shadow三层结构 ──────── */
 .stat-card {
   padding: 6px 8px;
   background: var(--bg2);
@@ -887,6 +917,7 @@ html, body {
 .stat-card.positive .stat-value { color: var(--green); }
 .stat-card.negative .stat-value { color: var(--accent); }
 
+/* ── 4f. 结束页底部按钮区(再战/下载) ───────────────── */
 .end-actions {
   display: flex;
   gap: 12px;
@@ -917,7 +948,10 @@ html, body {
   box-shadow: var(--shadow);
 }
 
-/* ═══════ Kelly hint ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 5. Kelly Hint 凯利模式提示条                            ║
+   ║    游戏页面底部显示Kelly建议下注额的提示卡片              ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .kelly-hint {
   position: fixed;
   top: 50%;
@@ -952,7 +986,10 @@ html, body {
   to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
-/* ═══════ Animations ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 6. Animations 动画定义                                  ║
+   ║    fadeIn/fadeOut/slideUp/pulse 等关键帧动画              ║
+   ╚══════════════════════════════════════════════════════════╝ */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -966,7 +1003,10 @@ html, body {
 .fade-in { animation: fadeIn 0.3s ease; }
 .slide-up { animation: slideUp 0.3s ease; }
 
-/* ═══════ Responsive ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 7. Responsive 响应式断点                                ║
+   ║    @media ≥ 400px / ≥ 500px 的适配规则                   ║
+   ╚══════════════════════════════════════════════════════════╝ */
 @media (min-width: 500px) {
   .card { width: 44px; height: 60px; }
   .card .card-center { font-size: 1.4rem; }
@@ -989,7 +1029,10 @@ html, body {
   }
 }
 
-/* ═══════ Action Evaluation Tags ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 8. Action Evaluation Tags 出手评估标签                   ║
+   ║    理性(绿)/冒进(红)/保守(金) 标签样式                    ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .action-eval-row {
   display: flex;
   align-items: center;
@@ -1034,7 +1077,10 @@ html, body {
   flex: 1;
 }
 
-/* ═══════ Action Stats ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 9. Action Stats 对局中的出手统计卡片                     ║
+   ║    (已从对局页面移除，保留样式以防回退)                    ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .action-stats {
   margin-bottom: 12px;
   padding: 12px;
@@ -1080,7 +1126,10 @@ html, body {
   color: var(--text-dim);
 }
 
-/* ═══════ End Screen Action Summary ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 10. End Screen Action Summary 结束页出手规范区域          ║
+   ║     (已合入 stats-grid 九宫格，此区域已隐藏)              ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .action-summary {
   width: 100%;
   max-width: 400px;
@@ -1124,7 +1173,10 @@ html, body {
   color: var(--text-dim);
 }
 
-/* ═══════ Analysis Modal ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 11. Analysis Modal 分析弹窗                              ║
+   ║     战力表/Quiz的模态框样式                               ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -1252,6 +1304,7 @@ html, body {
 .tier-1 { background: rgba(244,63,94,0.10); color: var(--accent); border: 1px solid rgba(244,63,94,0.2); }
 
 /* PnL 图表行（图+战力表按钮） */
+/* ── 3g. 游戏中PnL曲线(canvas+右侧标签+工具按钮) ────── */
 .pnl-chart-row {
   display: flex;
   align-items: stretch;
@@ -1350,7 +1403,9 @@ html, body {
   }
 }
 
-/* ═══════ Light Theme Overrides ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 12. Light Theme Overrides 亮色主题各组件覆盖              ║
+   ╚══════════════════════════════════════════════════════════╝ */
 [data-theme="light"] .card.visible {
   background: #f8fafa;
   border: none;
@@ -1433,7 +1488,9 @@ html, body {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-/* ═══════ Review Overlay (Bottom Sheet) ═══════ */
+/* ╔══════════════════════════════════════════════════════════╗
+   ║ 13. Review Overlay 回看上一局的底部抽屉                  ║
+   ╚══════════════════════════════════════════════════════════╝ */
 .review-overlay {
   position: fixed;
   bottom: 0; left: 0; right: 0;
