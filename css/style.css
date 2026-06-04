@@ -786,7 +786,7 @@ html, body {
 .end-header-row {
   display: flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: left;
   gap: 8px;
   font-size: 0.8rem;
   margin-bottom: 10px;
@@ -838,7 +838,7 @@ html, body {
 }
 .stat-group-gap {
   grid-column: 1 / -1;
-  margin-top: 12px;
+  margin-top: 2px;
 }
 
 .stat-card {
