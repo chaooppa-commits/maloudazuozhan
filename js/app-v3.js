@@ -117,7 +117,11 @@ function reportToSheets() {
     // 新增字段：组十三 观察者损因
     obsNoDoukou:  game.stats.obsNoDoukou,
     obsLowerPts:  game.stats.obsLowerPts,
-    obsFlatEat:   game.stats.flatEat.obs
+    obsFlatEat:   game.stats.flatEat.obs,
+    // 新增字段：组十四 波动次数
+    volatilityCount: (typeof _calcVolatility === 'function')
+      ? _calcVolatility(game.pnlHistory, game._initialPurse || INITIAL_PURSE).count
+      : 0
   });
 
   // ═══ 【测试沙盒】拦截，不上报真实数据 ═══
