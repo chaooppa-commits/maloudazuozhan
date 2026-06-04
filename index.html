@@ -87,11 +87,6 @@
   <div id="game-screen">
     <!-- Top bar -->
     <div class="top-bar">
-      <div class="round-info">
-        <span class="ri-tag">ALL </span><span class="ri-val" id="round-num">0</span>
-        <span class="ri-tag">IN </span><span class="ri-val" id="round-in">0</span>
-        <span class="ri-tag">WIN </span><span class="ri-val" id="round-win">0</span>
-      </div>
       <div class="purse-display">
         <div class="purse-item">
           <div class="purse-label">马喽</div>
@@ -103,6 +98,11 @@
           <div class="purse-value boss" id="boss-purse">$50</div>
           <div class="purse-bar"><div class="purse-bar-fill boss" id="boss-bar" style="width:50%"></div></div>
         </div>
+      </div>
+      <div class="round-info">
+        <span class="ri-tag">ALL </span><span class="ri-val" id="round-num">0</span>
+        <span class="ri-tag">IN </span><span class="ri-val" id="round-in">0</span>
+        <span class="ri-tag">WIN </span><span class="ri-val" id="round-win">0</span>
       </div>
     </div>
 
@@ -156,7 +156,6 @@
     </div>
     <div class="end-actions">
       <button class="end-btn secondary" onclick="downloadLog()">日志</button>
-      <button class="end-btn secondary" onclick="showAnalysis()">分析</button>
       <button class="end-btn primary" onclick="backToStart()">再战</button>
     </div>
   </div>
@@ -806,43 +805,20 @@
         tap();
         if (!_prevRoundData) return;
         const d = _prevRoundData;
-        const s = d.settlement;
-        const labels = ['Boss', 'A', 'B', 'C'];
 
         let html = '<div class="review-sheet">';
         html += '<div class="review-header"><span>回看上一局</span><button onclick="closeReview()">✕</button></div>';
 
-        // Card rows
-        for (let i = 0; i < 4; i++) {
-          const hand = d.hands[i];
-          const isEmp = i >= 1;
-          const lbl = labels[i];
-          let cls = 'review-row';
-          if (isEmp) {
-            const er = s.employeeResults[lbl];
-            if (er) cls += er.won ? ' rw' : ' rl';
-          }
-          html += `<div class="${cls}">`;
-          html += `<span class="review-lbl">${lbl}</span>`;
-          html += '<span class="review-cards">';
-          for (let j = 0; j < 5; j++) html += `<span class="rc">${hand[j]}</span>`;
-          html += '</span>';
-          if (isEmp) {
-            const er = s.employeeResults[lbl];
-            if (er) {
-              const mark = er.won ? '胜' : '负';
-              const mult = er.won && er.mult > 1 ? ` ×${er.mult}` : '';
-              html += `<span class="review-result ${er.won ? 'rw' : 'rl'}">${mark}${mult}</span>`;
-            }
-          } else {
-            html += `<span class="review-result ${s.observerPnl < 0 ? 'rw' : 'rl'}">${s.observerPnl < 0 ? '吃' : '亏'}</span>`;
-          }
-          html += '</div>';
-        }
+        // 复用完整卡牌行（含斗口结构标签、胜负高亮）
+        html += '<div class="review-card-table">';
+        html += _buildCardTableHtml(d.hands, d.settlement, 'result', null);
+        html += '</div>';
 
-        // PnL
-        const pnl = s.observerPnl;
-        html += `<div class="review-pnl ${pnl > 0 ? 'rw' : 'rl'}">${pnl > 0 ? '+' : ''}${pnl}</div>`;
+        // 复用完整结果区（胜负横幅 + 行动评价 + 精准闪避）
+        html += '<div class="review-result-section">';
+        html += _buildResultHtml(d.settlement, d.actionEval, d.hands, d.betTarget || 'SKIP');
+        html += '</div>';
+
         html += '</div>';
 
         document.getElementById('review-overlay').innerHTML = html;
@@ -881,7 +857,7 @@
 
         // Save for review and for current re-render
         if (settlement && game.phase === 'result') {
-          _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
+          _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval, betTarget: game.currentBet.target };
           game._lastSettlement = settlement;
           game._lastActionEval = actionEval;
           // 影子选手结算（使用独立的影子老板筹码）
@@ -926,14 +902,20 @@
       }
     }
 
-    function renderCardTable(settlement) {
-      const table = document.getElementById('card-table');
-      const isRevealed = game.phase === 'revealing' || game.phase === 'result';
-      const showTier = game.phase === 'result';
-      const isBetting = game.phase === 'betting';
+    /**
+     * 生成牌桌HTML（可被 renderCardTable 和 showReview 复用）
+     * @param {Array} hands - 4家手牌 [[5 cards], ...]
+     * @param {Object|null} settlement - 结算数据
+     * @param {string} phase - 'betting'|'revealing'|'result'
+     * @param {string} selectedTarget - 当前选中员工 'A'|'B'|'C'|null
+     */
+    function _buildCardTableHtml(hands, settlement, phase, selectedTarget) {
+      const isRevealed = phase === 'revealing' || phase === 'result';
+      const showTier = phase === 'result';
+      const isBetting = phase === 'betting';
       const allVisibleCards = [];
 
-      game.hands.forEach((hand, i) => {
+      hands.forEach((hand, i) => {
         allVisibleCards.push(hand[0], hand[1]);
       });
 
@@ -942,7 +924,7 @@
       const labelClasses = ['boss', 'emp-a', 'emp-b', 'emp-c'];
 
       for (let i = 0; i < 4; i++) {
-        const hand = game.hands[i];
+        const hand = hands[i];
         const v = [hand[0], hand[1]];
         const tierInfo = lookupTier(v[0], v[1]);
         const tier = tierInfo ? tierInfo.tier : '-';
@@ -952,7 +934,7 @@
 
         const empLabel = labels[i];
         const isEmp = i >= 1;
-        const isSelected = isBetting && isEmp && manualTarget === empLabel;
+        const isSelected = isBetting && isEmp && selectedTarget === empLabel;
         const clickable = isBetting && isEmp;
 
         let rowClass = 'player-row';
@@ -966,8 +948,6 @@
               rowClass += er.won ? ' result-win' : ' result-lose';
               if (er.won && er.mult > 1) rowClass += ' result-mult';
             }
-          } else {
-            // Boss row: no border highlights
           }
         }
 
@@ -991,7 +971,6 @@
         html += `</div>`;
 
         if (showTier) {
-          // 得分揭晓阶段：显示点数类型，颜色跟随胜负
           const scoreLabel = _getScoreLabel(hand);
           let scoreCls = '';
           if (isEmp && settlement) {
@@ -1018,28 +997,36 @@
         html += `</div>`;
       }
 
-      // Stake picker shown below cards when employee selected
-      if (isBetting && manualTarget) {
-        html += buildStakePickerHtml(manualTarget);
+      // Stake picker (only for live game, not review)
+      if (isBetting && selectedTarget) {
+        html += buildStakePickerHtml(selectedTarget);
       }
 
-      table.innerHTML = html;
+      return html;
     }
 
-    function renderResult(settlement, actionEval) {
-      const section = document.getElementById('result-section');
-      section.classList.add('show');
+    function renderCardTable(settlement) {
+      const table = document.getElementById('card-table');
+      table.innerHTML = _buildCardTableHtml(game.hands, settlement, game.phase, manualTarget);
+    }
 
+    /**
+     * 生成结果区HTML（可被 renderResult 和 showReview 复用）
+     * @param {Object} settlement - 结算数据
+     * @param {Object|null} actionEval - 行动评估
+     * @param {Array} hands - 4家手牌（精准闪避需查找最强员工）
+     * @param {Object} betTarget - 当前下注目标 'A'|'B'|'C'|'SKIP'|'RUN'
+     */
+    function _buildResultHtml(settlement, actionEval, hands, betTarget) {
       let html = '';
-      const target = game.currentBet.target;
-      if (target === 'SKIP') {
+      if (betTarget === 'SKIP') {
         html += `<div class="result-banner skip">- 跳过本局 -</div>`;
       } else {
         const pnl = settlement.observerPnl;
         if (pnl > 0) {
-          html += `<div class="result-banner win">+${pnl} 员工${target}胜!</div>`;
+          html += `<div class="result-banner win">+${pnl} 员工${betTarget}胜!</div>`;
         } else {
-          html += `<div class="result-banner lose">${pnl} 员工${target}负</div>`;
+          html += `<div class="result-banner lose">${pnl} 员工${betTarget}负</div>`;
         }
       }
 
@@ -1049,14 +1036,13 @@
         html += `<div class="action-eval-row">`;
         html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
         html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
-        // 精准闪避即时反馈（新规则）：SKIP时，始终显示闪避/错失标签
-        if (game.currentBet.target === 'SKIP') {
-          // 找出战力最强的员工
+        // 精准闪避即时反馈：SKIP时，始终显示闪避/错失标签
+        if (betTarget === 'SKIP') {
           let strongestEmp = null;
           let strongestPower = -999;
           for (const lbl of ['A', 'B', 'C']) {
             const idx = { A: 1, B: 2, C: 3 }[lbl];
-            const v = [game.hands[idx][0], game.hands[idx][1]];
+            const v = [hands[idx][0], hands[idx][1]];
             const info = lookupTier(v[0], v[1]);
             const power = info ? info.mp : 30;
             if (power > strongestPower) {
@@ -1064,7 +1050,6 @@
               strongestEmp = lbl;
             }
           }
-          // 所有SKIP局都显示闪避/错失标签
           if (strongestEmp) {
             const er = settlement.employeeResults[strongestEmp];
             const dodgeOk = er && !er.won;
@@ -1074,9 +1059,13 @@
         html += `</div>`;
       }
 
-      // 本局出手统计（已移除）
+      return html;
+    }
 
-      section.innerHTML = html;
+    function renderResult(settlement, actionEval) {
+      const section = document.getElementById('result-section');
+      section.classList.add('show');
+      section.innerHTML = _buildResultHtml(settlement, actionEval, game.hands, game.currentBet.target);
     }
 
     function renderActionBar() {
@@ -1105,8 +1094,8 @@
         } else {
           bar.innerHTML = `
             <div class="action-row-single">
-              <button class="bet-btn btn-pass" onclick="showAnalysis()">分析</button>
-              <button class="continue-btn" onclick="goNextRound()">下一局 →</button>
+              <button class="result-action-btn secondary" onclick="showAnalysis()">分析</button>
+              <button class="result-action-btn primary" onclick="goNextRound()">下一局 →</button>
             </div>
           `;
         }
