@@ -1309,7 +1309,7 @@ html, body {
   display: flex;
   align-items: stretch;
   gap: 4px;
-  margin: 8px 12px;
+  margin: 16px 12px 4px 12px ;
 }
 .pnl-chart-row .pnl-chart {
   flex: 1;
