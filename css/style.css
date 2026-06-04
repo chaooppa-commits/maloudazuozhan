@@ -243,7 +243,7 @@ html, body {
   padding: 16px;
   border: none;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--accent), #e1ca1d);
+  background: linear-gradient(135deg, #92710e, #e1ca1d);
   color: white;
   font-size: 1.2rem;
   font-weight: 700;
@@ -935,7 +935,7 @@ html, body {
 }
 
 .end-btn.primary {
-  background: linear-gradient(135deg, var(--accent), #e1ca1d);
+  background: linear-gradient(135deg, #92710e, #e1ca1d);
   color: white;
   box-shadow: 0 4px 12px rgba(244,63,94,0.25);
 }
