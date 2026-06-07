@@ -94,6 +94,7 @@ function reportToSheets() {
     rationalCnt: game.stats.rationalCnt,
     aggressCnt:  game.stats.aggressCnt,
     conservCnt:  game.stats.conservCnt,
+    cowardCnt:   game.stats.cowardCnt,
     dodgeCorrect: game.stats.dodgeCorrect,
     dodgeTotal:   game.stats.dodgeTotal,
     // 起死回生：仅本场赢时上报最低值，输场上报0
@@ -279,6 +280,7 @@ function startGame(kellyMode, seedStr, buyin) {
     rationalCnt: 0,
     aggressCnt:  0,
     conservCnt:  0,
+    cowardCnt:   0,   // 龟缩局：有优势没出手
     dodgeCorrect: 0,  // 精准闪避：跳过时最强员工输了
     dodgeTotal: 0,    // 精准闪避：总跳过局数
     comebackMin: null, // 起死回生：筹码跌破初始后的最低值（null=未跌破）
@@ -449,6 +451,7 @@ function placeBet(target, amount) {
       if (actionEval.tag === '理性') game.stats.rationalCnt++;
       else if (actionEval.tag === '冒进') game.stats.aggressCnt++;
       else if (actionEval.tag === '保守') game.stats.conservCnt++;
+      else if (actionEval.tag === '龟缩') game.stats.cowardCnt++;
   
     // Log round
     pushLog({
@@ -725,8 +728,8 @@ function evaluateAction(hands, betTarget, betAmount) {
     // 以最佳员工作为参考评估
     const stakeStr = 'pass';
     const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
-    // 等级差 < 2：pass 理性；等级差 >= 2：pass 保守（放弃了好机会）
-    const tag = sel.tierDiff >= 2 ? '保守' : '理性';
+    // 等级差 < 2：pass 理性；等级差 >= 2：pass 龟缩（有好机会没出手）
+    const tag = sel.tierDiff >= 2 ? '龟缩' : '理性';
     return { tag, detail: d };
   }
 
@@ -761,7 +764,7 @@ function getActionStats() {
     理性: { count: 0, obsWin: 0, obsLose: 0 },
     冒进: { count: 0, obsWin: 0, obsLose: 0 },
     保守: { count: 0, obsWin: 0, obsLose: 0 },
-    龟缩: { count: 0, shadowWin: 0, shadowLose: 0 }  // 该出手未出手，记录影子输/赢
+    龟缩: { count: 0, shadowWin: 0, shadowLose: 0 }
   };
 
   for (const r of roundLogs) {
@@ -769,21 +772,28 @@ function getActionStats() {
     const tag = r.actionEval.tag;
     const isSkip = r.betTarget === 'SKIP';
 
-    // 理性/冒进/保守：观察者下注时记录输/赢
-    if (stats[tag]) {
+    if (tag === '龟缩') {
+      // 龟缩局：有优势没出手，用最强员工结果替代影子
+      stats['龟缩'].count++;
+      // 找最强员工的结果
+      let bestLbl = null, bestPower = -999;
+      for (const lbl of ['A', 'B', 'C']) {
+        const idx = { A: 1, B: 2, C: 3 }[lbl];
+        const v = [r.finalHands[lbl][0], r.finalHands[lbl][1]];
+        const info = lookupTier(v[0], v[1]);
+        const power = info ? info.mp : 30;
+        if (power > bestPower) { bestPower = power; bestLbl = lbl; }
+      }
+      if (bestLbl && r.employeeResults[bestLbl]) {
+        if (r.employeeResults[bestLbl].won) stats['龟缩'].shadowWin++;
+        else stats['龟缩'].shadowLose++;
+      }
+    } else if (stats[tag]) {
       stats[tag].count++;
       if (!isSkip) {
         if (r.observerPnl > 0) stats[tag].obsWin++;
         else stats[tag].obsLose++;
       }
-    }
-
-    // 龟缩：观察者 SKIP，但影子会出手 → 记录影子输/赢
-    if (isSkip && r.shadow && r.shadow.target !== 'SKIP' && r.shadow.target !== 'RUN') {
-      stats['龟缩'].count++;
-      const er = r.employeeResults[r.shadow.target];
-      if (er && er.won) stats['龟缩'].shadowWin++;
-      else stats['龟缩'].shadowLose++;
     }
   }
 
@@ -946,14 +956,14 @@ function _mapTags(m) {
   if (m.avgBetPnl > 4)       huntTag = { label: '收割', color: 'positive' };
   else if (m.avgBetPnl > 2)  huntTag = { label: '搬砖', color: 'positive' };
   else if (m.avgBetPnl >= 0) huntTag = { label: '捡芝麻', color: 'neutral' };
-  else if (m.avgBetPnl >= -4) huntTag = { label: '车裂', color: 'negative' };
-  else                       huntTag = { label: '剐刑', color: 'negative' };
+  else if (m.avgBetPnl >= -4) huntTag = { label: '剐刑', color: 'negative' };
+  else                        huntTag = { label: '车裂', color: 'negative' };
 
   // #3 采样置信度
   let lengthTag;
-  if (m.totalRounds <= 30)      lengthTag = { label: '短局', color: 'negative' };
+  if (m.totalRounds <= 30)      lengthTag = { label: '短局', color: 'positive' };
   else if (m.totalRounds <= 50) lengthTag = { label: '中局', color: 'neutral' };
-  else                          lengthTag = { label: '长局', color: 'positive' };
+  else                          lengthTag = { label: '长局', color: 'negative' };
 
   // #4 战略定力
   let passTag;
