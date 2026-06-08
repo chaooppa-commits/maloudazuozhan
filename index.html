@@ -928,7 +928,18 @@
         const tier = tierInfo ? tierInfo.tier : '-';
 
         const blessings = blessingCards(v[0], v[1], allVisibleCards);
-        const blessingStr = blessings.map(b => `{${b.value}}\u00d7${b.remaining}`).join(' ');
+        // 计算福星卡总消耗（标准卡单位：1号=0.5张，其他=1张）
+        let blessConsumed = 0;
+        for (const bl of blessings) {
+          const x = bl.value;
+          let used = allVisibleCards.filter(c => c === x).length;
+          if (v[0] === x) used--;
+          if (v[1] === x) used--;
+          if (used < 0) used = 0;
+          const weight = (x === 1) ? 0.5 : 1;
+          blessConsumed += used * weight;
+        }
+        const consumeStr = blessConsumed > 0 ? `-${Number.isInteger(blessConsumed) ? blessConsumed : blessConsumed.toFixed(1)}` : '';
 
         const empLabel = labels[i];
         const isEmp = i >= 1;
@@ -989,7 +1000,7 @@
           html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
           html += `</div>`;
         } else {
-          html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+          html += `<div class="blessing-hint">${consumeStr ? `<span class="bless-consume${blessConsumed >= 3 ? ' s3' : blessConsumed >= 2 ? ' s2' : ' s1'}">${consumeStr}</span>` : '<span class="bless-consume zero"></span>'}</div>`;
         }
 
         html += `</div>`;
