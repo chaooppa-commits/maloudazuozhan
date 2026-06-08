@@ -136,6 +136,7 @@ function reportToSheets() {
     roiPct:       game._tagMetrics.roiPct,
     avgBetPnl:    game._tagMetrics.avgBetPnl,
     passRate:     game._tagMetrics.passRate,
+    actionGap:    game._tagMetrics.actionGap,
     alphaWinRate: game._tagMetrics.alphaWinRate,
     bullyRate:    game._tagMetrics.bullyRate,
     dodgeRate:    game._tagMetrics.dodgeRate,
@@ -911,7 +912,15 @@ function _computeTagMetrics() {
   // #3 采样置信度: 总场次
   // (直接使用 totalRounds)
 
-  // #4 战略定力: PASS率
+  // #4 战略定力: 出手率差（观察者出手率 - 影子出手率）
+  //   >10% = 手欠（比影子多出手超10个百分点）
+  //   <-5% = 观察（比影子少出手5个百分点以上）
+  //   其余 = 手痒
+  const obsActionRate = totalRounds > 0 ? +(betRounds / totalRounds * 100).toFixed(1) : 0;
+  const shad = (typeof shadow !== 'undefined') ? shadow : null;
+  const shadowActionRate = (shad && (shad.bet + shad.skip) > 0)
+    ? +(shad.bet / (shad.bet + shad.skip) * 100).toFixed(1) : 0;
+  const actionGap = +(obsActionRate - shadowActionRate).toFixed(1);
   const passRate = totalRounds > 0 ? +(skipRounds / totalRounds * 100).toFixed(1) : 0;
 
   // #5 Alpha超额胜率: 玩家出手胜率 - 3名员工全局平均胜率
@@ -944,7 +953,7 @@ function _computeTagMetrics() {
   const agencyRatio = totalDecisions > 0 ? +(posDecisions / totalDecisions).toFixed(3) : 0;
 
   return {
-    roiPct, avgBetPnl, totalRounds, passRate, alphaWinRate,
+    roiPct, avgBetPnl, totalRounds, passRate, actionGap, shadowActionRate, alphaWinRate,
     bullyRate, dodgeRate, lightPnl, heavyPnl, agencyRatio
   };
 }
@@ -974,11 +983,11 @@ function _mapTags(m) {
   else if (m.totalRounds <= 50) lengthTag = { label: '中局', color: 'neutral' };
   else                          lengthTag = { label: '长局', color: 'negative' };
 
-  // #4 战略定力
+  // #4 战略定力（相对影子出手率）
   let passTag;
-  if (m.passRate > 60)       passTag = { label: '观察', color: 'positive' };
-  else if (m.passRate >= 45) passTag = { label: '手痒', color: 'neutral' };
-  else                       passTag = { label: '手欠', color: 'negative' };
+  if (m.actionGap > 10)        passTag = { label: '手欠', color: 'negative' };
+  else if (m.actionGap < -5)   passTag = { label: '观察', color: 'positive' };
+  else                         passTag = { label: '手痒', color: 'neutral' };
 
   // #5 Alpha超额胜率
   let alphaTag;
