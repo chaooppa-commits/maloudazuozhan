@@ -703,10 +703,11 @@
       const bossTierDrop = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
       if (bossTierDrop >= 1) bossTier = Math.max(1, bossTier - bossTierDrop);
 
-      // 步骤1：按战力绝对值选目标（选与庄家差最大的员工）
+      // ★ 全候选评估：遍历所有员工，各自独立计算降档后的等级差和注额
+      // 解决问题：最强员工可能因福星卡降档不满足出手条件，但其他员工仍满足
       let bestTarget = null;
-      let bestPowerGap = 0;  // 员工战力 - 老板战力，正值才有价值
-      let bestEmpTier = 0;
+      let bestStake = 0;
+      let bestPowerGap = 0;
 
       for (let i = 1; i <= 3; i++) {
         const lbl = ['A', 'B', 'C'][i - 1];
@@ -717,41 +718,38 @@
         if (empTierDrop >= 1) empTier = Math.max(1, empTier - empTierDrop);
 
         const powerGap = empPower - bossPower;
-        if (powerGap > bestPowerGap) {
-          bestPowerGap = powerGap;
+        if (powerGap <= 0) continue;  // 员工不比庄家强，跳过
+
+        // 每个员工独立计算等级差（含降档）
+        const tierGap = empTier - bossTier;
+        const is1234 = (empInfo && empInfo.mn === '1234');
+
+        let stake = 0;
+        if (tierGap === 2 || (tierGap === 1 && is1234)) {
+          stake = 4;
+        } else if (tierGap === 3) {
+          stake = 8;
+        } else if (tierGap >= 4) {
+          stake = 12;
+        }
+
+        if (stake <= 0) continue;  // 降档后不满足出手条件，检查下一个员工
+
+        // 额限
+        stake = Math.min(stake, shadowBossPurse, shadowPurse);
+        if (stake < 1) continue;
+
+        // 选最高注额的候选（注额相同时选powerGap更大的）
+        if (stake > bestStake || (stake === bestStake && powerGap > bestPowerGap)) {
+          bestStake = stake;
           bestTarget = lbl;
-          bestEmpTier = empTier;
+          bestPowerGap = powerGap;
         }
       }
 
       if (!bestTarget) return { target: 'SKIP', amount: 0 };
 
-      // 步骤2：按等级差决定下注额
-      const tierGap = bestEmpTier - bossTier;
-
-      // 中优势：2档差 → 下4；但影子选手(员工A)拿到1234组合时，1档差也算中优势 → 下4
-      // 高优势：3档差 → 下8
-      // 超优势：4档差 → 下12
-      // 其他：pass
-      const bestEmpIdx = ['A', 'B', 'C'].indexOf(bestTarget) + 1;
-      const bestEmpInfo = lookupTier(hands[bestEmpIdx][0], hands[bestEmpIdx][1]);
-      const is1234 = (bestEmpInfo && bestEmpInfo.mn === '1234'); // 员工拿到1234组合时，1档差也当中优势
-      let stake = 0;
-      if (tierGap === 2 || (tierGap === 1 && is1234)) {
-        stake = 4;
-      } else if (tierGap === 3) {
-        stake = 8;
-      } else if (tierGap >= 4) {
-        stake = 12;
-      }
-
-      if (stake <= 0) return { target: 'SKIP', amount: 0 };
-
-      // 不能超过影子老板余额和影子余额
-      stake = Math.min(stake, shadowBossPurse, shadowPurse);
-      if (stake < 1) return { target: 'SKIP', amount: 0 };
-
-      return { target: bestTarget, amount: stake };
+      return { target: bestTarget, amount: bestStake };
     }
 
     /**
