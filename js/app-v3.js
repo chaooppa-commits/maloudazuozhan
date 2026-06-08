@@ -65,6 +65,12 @@ function reportToSheets() {
 
   // 影子选手结束筹码
   const shadowFinalPurse = (typeof shadow !== 'undefined') ? shadow.purse : 0;
+  // 影子选手净收益
+  const shadowNetPnl = shad ? (shad.purse - buyin) : 0;
+  // 影子选手每局平均收益（总局数 = 出手 + 跳过）
+  const shadowTotalRounds = shad ? (shad.bet + shad.skip) : 0;
+  const shadowAvgPnl = (shad && shadowTotalRounds > 0)
+    ? +((shad.purse - buyin) / shadowTotalRounds).toFixed(2) : 0;
 
   // 注码收益
   const stakePnl4  = game.stats.stakePnl[4]  || 0;
@@ -110,6 +116,9 @@ function reportToSheets() {
     empCWinRate:   empCWinRate,
     // 新增字段：组十一 影子筹码
     shadowFinalPurse: shadowFinalPurse,
+    // 新增字段：组十六 影子收益
+    shadowNetPnl:    shadowNetPnl,
+    shadowAvgPnl:    shadowAvgPnl,
     // 新增字段：组十二 注码收益
     stakePnl4:  stakePnl4,
     stakePnl8:  stakePnl8,
