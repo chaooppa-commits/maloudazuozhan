@@ -1318,6 +1318,10 @@
       const shadowRoi = shadow.totalStaked > 0 ? (shadowNetPnl / shadow.totalStaked * 100).toFixed(0) : 0;
       const shadowRounds = shadow.bet + shadow.skip;
       
+      // 出手率对比（战略定力依据）
+      const obsActionRate = game.roundNo > 0 ? (totalBet / game.roundNo * 100).toFixed(0) : 0;
+      const shadowActionRate = shadowRounds > 0 ? (shadow.bet / shadowRounds * 100).toFixed(0) : 0;
+      
       // 拉锯指数：筹码波动幅度 / 带入金额
       const swing = game.obsMaxPurse - game.obsMinPurse;
       const swingIndex = game._initialPurse > 0 ? (swing / game._initialPurse).toFixed(2) : '0.00';
@@ -1399,6 +1403,7 @@
         ${sc(game.roundNo, shadowRounds, '总场次')}
         ${sc(totalBet, shadow.bet, '出手')}
         ${sc(game.roundNo - totalBet, shadow.skip, '跳过')}
+        ${sc(obsActionRate + '%', shadowActionRate + '%', '出手率')}
         ${GAP}
         ${TAGROW([tags.alphaTag, tags.bullyTag, tags.defenseTag])}
         ${sc(game.stats.win + '/' + game.stats.lose, shadow.win + '/' + shadow.lose, '胜/负')}
