@@ -7,20 +7,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>马喽大作战</title>
-
-  <script>
-    (function() {
-      function lockVH() {
-        var vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', vh + 'px');
-      }
-      lockVH();
-      window.addEventListener('orientationchange', function() {
-        setTimeout(lockVH, 200);
-      });
-    })();
-  </script>
-
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -105,10 +91,12 @@
         <div class="purse-item">
           <div class="purse-label">马喽</div>
           <div class="purse-value obs" id="obs-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
         </div>
         <div class="purse-item">
           <div class="purse-label">老板</div>
           <div class="purse-value boss" id="boss-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill boss" id="boss-bar" style="width:50%"></div></div>
         </div>
       </div>
       <div class="round-info">
@@ -116,54 +104,27 @@
         <span class="ri-tag">IN </span><span class="ri-val" id="round-in">0</span>
         <span class="ri-tag">WIN </span><span class="ri-val" id="round-win">0</span>
       </div>
-      <div class="top-actions">
-        <button class="icon-btn" onclick="showQuiz()" title="战力记忆练习"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M754.5 573.1c-16.8-14.3-42.1-12.3-56.4 4.5l-76.4 89.6-25.8-30.5c-14.3-16.9-39.5-19-56.4-4.7s-19 39.5-4.7 56.4l32.7 38.6 2.5 2.1c14.1 12 32.5 18.6 51.7 18.6s37.6-6.6 51.7-18.6l2.5-2.1 83.1-97.5c14.3-16.8 12.3-42.1-4.5-56.4zM348.3 562.8c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM348.3 275.6c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM641.3 461.2c51.2 0 92.8-41.6 92.8-92.8s-41.6-92.8-92.8-92.8-92.8 41.6-92.8 92.8 41.6 92.8 92.8 92.8z m0-105.6c7.1 0 12.8 5.8 12.8 12.8s-5.8 12.8-12.8 12.8-12.8-5.8-12.8-12.8 5.7-12.8 12.8-12.8z"/><path d="M813.2 99.7H210.8c-81.6 0-148.1 66.4-148.1 148.1v528.5c0 81.6 66.4 148.1 148.1 148.1h602.5c81.6 0 148.1-66.4 148.1-148.1V247.8c-0.1-81.7-66.5-148.1-148.2-148.1z m63.5 676.5c0 35-28.5 63.5-63.5 63.5H210.8c-35 0-63.5-28.5-63.5-63.5V247.8c0-35 28.5-63.5 63.5-63.5h602.5c35 0 63.5 28.5 63.5 63.5v528.4z"/></svg></button>
-        <button class="icon-btn" onclick="showTierTable()" title="战力表"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M769.1 69H254.9C171.7 69 104 136.7 104 219.9v584.2c0 83.2 67.7 150.9 150.9 150.9h514.2c83.2 0 150.9-67.7 150.9-150.9V219.9C920 136.7 852.3 69 769.1 69zM840 804.1c0 39.1-31.8 70.9-70.9 70.9H254.9c-39.1 0-70.9-31.8-70.9-70.9V219.9c0-39.1 31.8-70.9 70.9-70.9h514.2c39.1 0 70.9 31.8 70.9 70.9v584.2z"/><path d="M577.2 334c-10.6-27-36.2-44.5-65.2-44.5S457.4 307 446.8 334L311.4 679.9c-8 20.6 2.1 43.8 22.7 51.8 4.8 1.9 9.7 2.8 14.6 2.8 16 0 31.1-9.7 37.3-25.4l48.5-123.8h155.2l48.5 123.8c8 20.6 31.3 30.7 51.8 22.7 20.6-8 30.7-31.3 22.7-51.8L577.2 334zM465.7 505.3L512 386.9l46.3 118.3h-92.6z"/></svg></button>
-        <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M919.6 319L746.4 120.8l-0.7-0.8c-15.9-17.3-38.9-25.3-61.7-21.5-23.3 3.9-43 19.6-52.7 42-19.6 45.1-64 72.1-118.8 72.1h-1.9c-55.2 0.8-98.5-25.1-118.9-71.4-9.8-22.3-29.6-37.8-52.8-41.7-22.7-3.8-45.7 4.3-61.6 21.5l-0.3 0.4L104.4 319C79 346.8 65.1 383.5 65.1 422.5c0 39.2 14.1 76.1 39.7 103.9l0.3 0.3c26.4 28.7 62.8 44.6 100.3 44.6 3 0 6.1-0.1 9.2-0.3v215.4c0 77.2 62.8 140 140 140h314c77.2 0 140-62.8 140-140V570.9c3.4 0.3 6.9 0.4 10.3 0.4 37.5 0 73.8-15.9 100.2-44.6l0.2-0.2c25.6-27.8 39.7-64.8 39.7-103.9-0.1-39.1-14-75.8-39.4-103.6z m-59.3 153.3l-0.2 0.2c-13.4 14.5-31.6 21.1-50 18.1-20.4-3.4-41.2 2.3-57 15.7-15.7 13.3-24.7 32.7-24.7 53.3v226.8c0 33.1-26.9 60-60 60h-314c-33.1 0-60-26.9-60-60V559.8c0-20.5-8.9-39.8-24.5-53.1-12.8-11-29-16.9-45.6-16.9-3.6 0-7.3 0.3-11 0.9-18.2 2.9-36.3-3.8-49.5-18.1l-0.3-0.3c-24.8-27-24.8-72.6 0-99.6l0.3-0.4 161.3-184.7c16 29.8 38.9 54.7 67.1 72.8 34.5 22 76.3 33.2 120.9 32.2h0.5c80.1-0.4 149.1-40.5 184-105.9l162 185.3 0.7 0.8c24.8 26.9 24.8 72.5 0 99.5z"/></svg></button>
-      </div>
-      <!-- Tug-of-war chip comparison line -->
-      <div class="tug-line">
-        <div class="tug-obs" id="tug-obs" style="width:50%"></div>
-        <div class="tug-boss" id="tug-boss" style="width:50%"></div>
-      </div>
     </div>
 
-    <!-- Chart slider (candle + line) -->
-    <div class="chart-slider">
-      <div class="chart-track" id="chart-track">
-        <div class="chart-slide">
-          <div class="chart-slide-inner">
-            <div class="pnl-chart">
-              <canvas id="pnl-canvas"></canvas>
-            </div>
-            <div class="pnl-labels" id="pnl-labels"></div>
-          </div>
-        </div>
-        <div class="chart-slide">
-          <div class="chart-slide-inner">
-            <div class="pnl-chart">
-              <canvas id="pnl-line-canvas"></canvas>
-            </div>
-            <div class="pnl-labels" id="pnl-line-labels"></div>
-          </div>
-        </div>
+    <!-- PnL chart -->
+    <div class="pnl-chart-row">
+      <div class="pnl-chart">
+        <canvas id="pnl-canvas"></canvas>
       </div>
+      <div class="pnl-labels" id="pnl-labels"></div>
+      <button class="tier-table-btn" onclick="showQuiz()" title="战力记忆练习"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M754.5 573.1c-16.8-14.3-42.1-12.3-56.4 4.5l-76.4 89.6-25.8-30.5c-14.3-16.9-39.5-19-56.4-4.7s-19 39.5-4.7 56.4l32.7 38.6 2.5 2.1c14.1 12 32.5 18.6 51.7 18.6s37.6-6.6 51.7-18.6l2.5-2.1 83.1-97.5c14.3-16.8 12.3-42.1-4.5-56.4zM348.3 562.8c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM348.3 275.6c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM641.3 461.2c51.2 0 92.8-41.6 92.8-92.8s-41.6-92.8-92.8-92.8-92.8 41.6-92.8 92.8 41.6 92.8 92.8 92.8z m0-105.6c7.1 0 12.8 5.8 12.8 12.8s-5.8 12.8-12.8 12.8-12.8-5.8-12.8-12.8 5.7-12.8 12.8-12.8z"/><path d="M813.2 99.7H210.8c-81.6 0-148.1 66.4-148.1 148.1v528.5c0 81.6 66.4 148.1 148.1 148.1h602.5c81.6 0 148.1-66.4 148.1-148.1V247.8c-0.1-81.7-66.5-148.1-148.2-148.1z m63.5 676.5c0 35-28.5 63.5-63.5 63.5H210.8c-35 0-63.5-28.5-63.5-63.5V247.8c0-35 28.5-63.5 63.5-63.5h602.5c35 0 63.5 28.5 63.5 63.5v528.4z"/></svg></button>
+      <button class="tier-table-btn" onclick="showTierTable()" title="战力表"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M769.1 69H254.9C171.7 69 104 136.7 104 219.9v584.2c0 83.2 67.7 150.9 150.9 150.9h514.2c83.2 0 150.9-67.7 150.9-150.9V219.9C920 136.7 852.3 69 769.1 69zM840 804.1c0 39.1-31.8 70.9-70.9 70.9H254.9c-39.1 0-70.9-31.8-70.9-70.9V219.9c0-39.1 31.8-70.9 70.9-70.9h514.2c39.1 0 70.9 31.8 70.9 70.9v584.2z"/><path d="M577.2 334c-10.6-27-36.2-44.5-65.2-44.5S457.4 307 446.8 334L311.4 679.9c-8 20.6 2.1 43.8 22.7 51.8 4.8 1.9 9.7 2.8 14.6 2.8 16 0 31.1-9.7 37.3-25.4l48.5-123.8h155.2l48.5 123.8c8 20.6 31.3 30.7 51.8 22.7 20.6-8 30.7-31.3 22.7-51.8L577.2 334zM465.7 505.3L512 386.9l46.3 118.3h-92.6z"/></svg></button>
+      <button class="tier-table-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M919.6 319L746.4 120.8l-0.7-0.8c-15.9-17.3-38.9-25.3-61.7-21.5-23.3 3.9-43 19.6-52.7 42-19.6 45.1-64 72.1-118.8 72.1h-1.9c-55.2 0.8-98.5-25.1-118.9-71.4-9.8-22.3-29.6-37.8-52.8-41.7-22.7-3.8-45.7 4.3-61.6 21.5l-0.3 0.4L104.4 319C79 346.8 65.1 383.5 65.1 422.5c0 39.2 14.1 76.1 39.7 103.9l0.3 0.3c26.4 28.7 62.8 44.6 100.3 44.6 3 0 6.1-0.1 9.2-0.3v215.4c0 77.2 62.8 140 140 140h314c77.2 0 140-62.8 140-140V570.9c3.4 0.3 6.9 0.4 10.3 0.4 37.5 0 73.8-15.9 100.2-44.6l0.2-0.2c25.6-27.8 39.7-64.8 39.7-103.9-0.1-39.1-14-75.8-39.4-103.6z m-59.3 153.3l-0.2 0.2c-13.4 14.5-31.6 21.1-50 18.1-20.4-3.4-41.2 2.3-57 15.7-15.7 13.3-24.7 32.7-24.7 53.3v226.8c0 33.1-26.9 60-60 60h-314c-33.1 0-60-26.9-60-60V559.8c0-20.5-8.9-39.8-24.5-53.1-12.8-11-29-16.9-45.6-16.9-3.6 0-7.3 0.3-11 0.9-18.2 2.9-36.3-3.8-49.5-18.1l-0.3-0.3c-24.8-27-24.8-72.6 0-99.6l0.3-0.4 161.3-184.7c16 29.8 38.9 54.7 67.1 72.8 34.5 22 76.3 33.2 120.9 32.2h0.5c80.1-0.4 149.1-40.5 184-105.9l162 185.3 0.7 0.8c24.8 26.9 24.8 72.5 0 99.5z"/></svg></button>
     </div>
 
-    <!-- Scrollable body: card table + results + skip -->
-    <div class="game-body" id="game-body">
-      <!-- Card table -->
-      <div class="card-table" id="card-table">
-        <!-- Rendered dynamically -->
-      </div>
+    <!-- Card table -->
+    <div class="card-table" id="card-table">
+      <!-- Rendered dynamically -->
+    </div>
 
-      <!-- Result section (hidden until reveal) -->
-      <div class="result-section" id="result-section">
-        <!-- Rendered dynamically -->
-      </div>
-
-      <!-- Skip button area (in-page, same size as continue button) -->
-      <div class="skip-area" id="skip-area"></div>
+    <!-- Result section (hidden until reveal) -->
+    <div class="result-section" id="result-section">
+      <!-- Rendered dynamically -->
     </div>
 
     <!-- Action bar -->
@@ -182,25 +143,11 @@
       <span id="end-title"></span>
       <span id="end-subtitle" class="end-subtitle"></span>
     </div>
-    <div class="chart-slider end-chart-slider">
-      <div class="chart-track" id="end-chart-track">
-        <div class="chart-slide">
-          <div class="chart-slide-inner">
-            <div class="end-pnl-chart">
-              <canvas id="end-pnl-canvas"></canvas>
-            </div>
-            <div class="pnl-labels" id="end-pnl-labels"></div>
-          </div>
-        </div>
-        <div class="chart-slide">
-          <div class="chart-slide-inner">
-            <div class="end-pnl-chart">
-              <canvas id="end-line-canvas"></canvas>
-            </div>
-            <div class="pnl-labels" id="end-line-labels"></div>
-          </div>
-        </div>
+    <div class="end-pnl-chart-wrap">
+      <div class="end-pnl-chart">
+        <canvas id="end-pnl-canvas"></canvas>
       </div>
+      <div class="pnl-labels" id="end-pnl-labels"></div>
     </div>
     <div class="stats-grid" id="stats-grid">
       <!-- Rendered dynamically -->
@@ -209,8 +156,8 @@
       <!-- 出手规范分析 -->
     </div>
     <div class="end-actions">
+      <button class="end-btn secondary" onclick="downloadLog()">日志</button>
       <button class="end-btn primary" onclick="backToStart()">再战</button>
-      <button class="end-btn text-btn" onclick="downloadLog()">日志</button>
     </div>
     </div>
   </div>
@@ -654,8 +601,6 @@
         el.style.display = (s === id) ? 'flex' : 'none';
       });
       window.scrollTo(0, 0);
-      const gb = document.getElementById('game-body');
-      if (gb) gb.scrollTop = 0;
     }
 
     // ═══════════════════════════════════════════════════════
@@ -937,10 +882,10 @@
         document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
 
         const totalPurse = game.obsPurse + game.bossPurse;
-        const obsPct = Math.max(0, Math.min(100, totalPurse > 0 ? (game.obsPurse / totalPurse) * 100 : 50));
-        const bossPct = 100 - obsPct;
-        document.getElementById('tug-obs').style.width = obsPct + '%';
-        document.getElementById('tug-boss').style.width = bossPct + '%';
+        const obsPct = Math.max(0, Math.min(100, (game.obsPurse / totalPurse) * 100));
+        const bossPct = Math.max(0, Math.min(100, (game.bossPurse / totalPurse) * 100));
+        document.getElementById('obs-bar').style.width = obsPct + '%';
+        document.getElementById('boss-bar').style.width = bossPct + '%';
 
         renderCardTable(settlement);
         renderPnlChart();
@@ -1063,6 +1008,11 @@
         html += `</div>`;
       }
 
+      // Stake picker (only for live game, not review)
+      if (isBetting && selectedTarget) {
+        html += buildStakePickerHtml(selectedTarget);
+      }
+
       return html;
     }
 
@@ -1120,15 +1070,6 @@
         html += `</div>`;
       }
 
-      const ip = game._initialPurse || INITIAL_PURSE;
-      const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0 || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2;
-      if (gameOver) {
-        html += `<button class="result-action-btn primary" onclick="endGame('normal')" style="margin-top:12px;width:100%">查看结算</button>`;
-      } else {
-        html += `<button class="result-action-btn primary" onclick="goNextRound()" style="margin-top:12px;width:100%">下一局 →</button>`;
-        html += `<button class="result-text-btn" onclick="showAnalysis()">分析</button>`;
-      }
-
       return html;
     }
 
@@ -1140,31 +1081,37 @@
 
     function renderActionBar() {
       const bar = document.getElementById('action-bar');
-      const skipArea = document.getElementById('skip-area');
 
       if (game.phase === 'betting') {
         const reviewBtn = _prevRoundData
           ? '<button class="bet-btn btn-pass" onclick="showReview()">回看</button>'
-          : '<button class="bet-btn btn-pass" disabled>回看</button>';
+          : '';
         bar.innerHTML = `
           <div class="action-row-single">
             <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
             ${reviewBtn}
+            <button class="bet-btn btn-pass" onclick="onBet('SKIP',0)">跳过</button>
           </div>
         `;
-        // skip-slot: fixed 118px container; stake-picker fills it instead of blank spacer
-        // so the skip-ghost-btn below never shifts when an employee is selected
-        const slotContent = manualTarget ? buildStakePickerHtml(manualTarget) : '';
-        skipArea.innerHTML = `
-          <div class="skip-slot">${slotContent}</div>
-          <button class="skip-ghost-btn" onclick="onBet('SKIP',0)">跳过本局</button>
-        `;
       } else if (game.phase === 'result') {
-        bar.innerHTML = '';
-        skipArea.innerHTML = '';
+        const ip = game._initialPurse || INITIAL_PURSE;
+        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0 || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2;
+        if (gameOver) {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="continue-btn" onclick="endGame('normal')">查看结算</button>
+            </div>
+          `;
+        } else {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="result-action-btn secondary" onclick="showAnalysis()">分析</button>
+              <button class="result-action-btn primary" onclick="goNextRound()">下一局 →</button>
+            </div>
+          `;
+        }
       } else {
         bar.innerHTML = '';
-        skipArea.innerHTML = '';
       }
     }
 
@@ -1549,14 +1496,7 @@
     }
 
     function renderPnlChart() {
-      _drawCandleChart('pnl-canvas');
-      renderLineChart();
-      updatePnlLabels('pnl-labels');
-      updatePnlLabels('pnl-line-labels');
-    }
-
-    function renderLineChart() {
-      const canvas = document.getElementById('pnl-line-canvas');
+      const canvas = document.getElementById('pnl-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -1564,6 +1504,7 @@
       const h = Math.floor(rect.height);
       const dpr = window.devicePixelRatio || 2;
 
+      // 画布尺寸只在变化时重置，防止移动端 WebKit 内存泄漏/闪退
       if (canvas._cacheW !== w || canvas._cacheH !== h || canvas._cacheDpr !== dpr) {
         canvas._cacheW = w;
         canvas._cacheH = h;
@@ -1585,19 +1526,23 @@
         return;
       }
 
-      const totalPoints = data.length;
+      const totalPoints = data.length;  // 以观察者为基准坐标系
+
       const allVals = [...data, ...shData, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
 
-      // Shadow curve（退场后延伸为水平直线）
+      updatePnlLabels('pnl-labels');
+
+      // Shadow curve（退场后延伸为水平直线，保持与观察者同一横向坐标系）
       if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);  // 退场后虚线
         ctx.beginPath();
         for (let i = 0; i < totalPoints; i++) {
+          // 影子数据不足时，用最后一个值延伸（水平直线）
           const val = i < shData.length ? shData[i] : shData[shData.length - 1];
           const x = (i / (totalPoints - 1)) * w;
           const y = h - ((val - minVal) / range) * (h - 8) - 4;
@@ -1624,14 +1569,7 @@
     }
 
     function renderEndPnlChart() {
-      _drawCandleChart('end-pnl-canvas');
-      renderEndLineChart();
-      updatePnlLabels('end-pnl-labels');
-      updatePnlLabels('end-line-labels');
-    }
-
-    function renderEndLineChart() {
-      const canvas = document.getElementById('end-line-canvas');
+      const canvas = document.getElementById('end-pnl-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -1660,17 +1598,20 @@
         return;
       }
 
-      const totalPoints = data.length;
+      const totalPoints = data.length;  // 以观察者为基准坐标系
+
       const allVals = [...data, ...shData, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
 
-      // Shadow curve
+      updatePnlLabels('end-pnl-labels');
+
+      // Shadow curve（退场后延伸为水平虚线）
       if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);
         ctx.beginPath();
         for (let i = 0; i < totalPoints; i++) {
           const val = i < shData.length ? shData[i] : shData[shData.length - 1];
@@ -1685,7 +1626,7 @@
 
       // Player curve
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
         const x = (i / (totalPoints - 1)) * w;
@@ -1696,157 +1637,6 @@
       ctx.stroke();
 
       ctx.restore();
-    }
-
-    function _drawCandleChart(canvasId) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const container = canvas.parentElement;
-      const rect = container.getBoundingClientRect();
-      const visibleW = Math.floor(rect.width);
-      const visibleH = Math.floor(rect.height);
-      const dpr = window.devicePixelRatio || 2;
-
-      const data = game.pnlHistory;
-      const shData = shadow.pnlHistory;
-      const buyin = game._initialPurse || INITIAL_PURSE;
-
-      // 新局开始时 data=[0]，清除旧画布残留
-      if (data.length < 2) {
-        canvas._cacheW = 0;
-        canvas._cacheH = 0;
-        ctx.save();
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-        ctx.restore();
-        return;
-      }
-
-      // 纵轴：40筹码可见窗口，以buyin为中心
-      const CHIPS_VISIBLE = 40;
-      const allPurses = [buyin + Math.min(...data), buyin + Math.max(...data)];
-      if (shData.length >= 2) {
-        allPurses.push(buyin + Math.min(...shData));
-        allPurses.push(buyin + Math.max(...shData));
-      }
-      const dataMinPurse = Math.min(...allPurses);
-      const dataMaxPurse = Math.max(...allPurses);
-      let MIN_PURSE = buyin - CHIPS_VISIBLE / 2;
-      let MAX_PURSE = buyin + CHIPS_VISIBLE / 2;
-      // 数据超出窗口时扩展canvas高度（上下滑动）
-      if (dataMinPurse < MIN_PURSE) MIN_PURSE = dataMinPurse - 5;
-      if (dataMaxPurse > MAX_PURSE) MAX_PURSE = dataMaxPurse + 5;
-      const totalRange = MAX_PURSE - MIN_PURSE;
-      const pxPerChip = visibleH / CHIPS_VISIBLE;
-      const canvasH = Math.ceil(totalRange * pxPerChip);
-
-      // 横轴：25局填满100%宽度
-      const totalRounds = data.length - 1;
-      const ROUNDS_PER_VIEW = 25;
-      // 超过25局时只展示最近25局
-      let startIdx = 0;
-      if (totalRounds > ROUNDS_PER_VIEW) {
-        startIdx = totalRounds - ROUNDS_PER_VIEW;
-      }
-      const displayCount = totalRounds - startIdx;
-      const unitW = visibleW / ROUNDS_PER_VIEW;
-      const CANDLE_W = Math.max(2, Math.floor(unitW * 0.75));
-      const GAP = Math.max(1, Math.floor(unitW * 0.25));
-      const contentW = displayCount * (CANDLE_W + GAP);
-
-      // 设置canvas尺寸
-      if (canvas._cacheW !== contentW || canvas._cacheH !== canvasH || canvas._cacheDpr !== dpr) {
-        canvas._cacheW = contentW;
-        canvas._cacheH = canvasH;
-        canvas._cacheDpr = dpr;
-        canvas.width = Math.floor(contentW * dpr);
-        canvas.height = Math.floor(canvasH * dpr);
-        canvas.style.width = contentW + 'px';
-        canvas.style.height = canvasH + 'px';
-      }
-      if (contentW <= 0 || canvasH <= 0) return;
-
-      ctx.save();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, contentW, canvasH);
-
-      // y坐标映射
-      function getY(purse) {
-        return canvasH - ((purse - MIN_PURSE) / totalRange) * canvasH;
-      }
-
-      // buyin 参考线
-      const buyinY = getY(buyin);
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, buyinY);
-      ctx.lineTo(contentW, buyinY);
-      ctx.stroke();
-
-      // 绘制蜡烛
-      for (let i = 0; i < displayCount; i++) {
-        const di = startIdx + i;
-        const openPurse = buyin + data[di];
-        const closePurse = buyin + data[di + 1];
-        const x = i * (CANDLE_W + GAP);
-
-        if (openPurse === closePurse) {
-          ctx.strokeStyle = 'rgba(156,163,175,0.5)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(x + 0.5, getY(openPurse));
-          ctx.lineTo(x + CANDLE_W - 0.5, getY(openPurse));
-          ctx.stroke();
-        } else {
-          const color = closePurse > openPurse ? 'rgba(16,185,129,0.85)' : 'rgba(244,63,94,0.85)';
-          ctx.fillStyle = color;
-          const topY = getY(Math.max(openPurse, closePurse));
-          const bottomY = getY(Math.min(openPurse, closePurse));
-          ctx.fillRect(x, topY, CANDLE_W, Math.max(1, bottomY - topY));
-        }
-      }
-
-      // 绘制影子折线（白色实线）
-      if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        for (let i = 0; i < displayCount; i++) {
-          const di = startIdx + i;
-          const shIdx = Math.min(di + 1, shData.length - 1);
-          const shPurse = buyin + shData[shIdx];
-          const x = i * (CANDLE_W + GAP) + CANDLE_W / 2;
-          const y = getY(shPurse);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      ctx.restore();
-
-      // 自动滚动：水平到最右侧，垂直到最新筹码位置
-      requestAnimationFrame(() => {
-        container.scrollLeft = container.scrollWidth - container.clientWidth;
-        // 垂直滚动：让最新筹码位置在可见区域内
-        const latestPurse = buyin + data[data.length - 1];
-        const latestCanvasY = getY(latestPurse);
-        const currentScrollTop = container.scrollTop;
-        // latestCanvasY是相对于canvas顶部的位置
-        // 可见窗口: currentScrollTop ~ currentScrollTop + visibleH
-        if (latestCanvasY < currentScrollTop || latestCanvasY > currentScrollTop + visibleH) {
-          // 最新筹码超出可见区域，滚动到居中
-          container.scrollTop = Math.max(0, latestCanvasY - visibleH / 2);
-        } else {
-          // 默认以buyin线居中
-          const buyinScrollTop = buyinY - visibleH / 2;
-          container.scrollTop = Math.max(0, buyinScrollTop);
-        }
-      });
     }
 
     // ═══════════════════════════════════════════════════════
