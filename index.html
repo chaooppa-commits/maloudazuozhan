@@ -160,6 +160,9 @@
       <!-- Rendered dynamically -->
     </div>
 
+    <!-- Skip button area (in-page, same size as continue button) -->
+    <div class="skip-area" id="skip-area"></div>
+
     <!-- Action bar -->
     <div class="action-bar" id="action-bar">
       <!-- Rendered dynamically -->
@@ -1137,6 +1140,7 @@
 
     function renderActionBar() {
       const bar = document.getElementById('action-bar');
+      const skipArea = document.getElementById('skip-area');
 
       if (game.phase === 'betting') {
         const reviewBtn = _prevRoundData
@@ -1146,13 +1150,16 @@
           <div class="action-row-single">
             <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
             ${reviewBtn}
-            <button class="bet-btn btn-pass" onclick="onBet('SKIP',0)">跳过</button>
           </div>
         `;
+        // Skip button in page area (same size as continue/next-round button)
+        skipArea.innerHTML = `<button class="result-action-btn primary" onclick="onBet('SKIP',0)" style="width:100%">跳过本局</button>`;
       } else if (game.phase === 'result') {
         bar.innerHTML = '';
+        skipArea.innerHTML = '';
       } else {
         bar.innerHTML = '';
+        skipArea.innerHTML = '';
       }
     }
 
@@ -1728,7 +1735,7 @@
       // 确定显示范围（最多显示全部局数）
       const totalRounds = data.length - 1;
       // 40局填满100%宽度 → 计算每根蜡烛宽度
-      const ROUNDS_PER_VIEW = 40;
+      const ROUNDS_PER_VIEW = 30;
       const candleTotalWidth = Math.max(visibleW, totalRounds * (visibleW / ROUNDS_PER_VIEW));
       const unitW = visibleW / ROUNDS_PER_VIEW;
       const CANDLE_W = Math.max(2, Math.floor(unitW * 0.75));
