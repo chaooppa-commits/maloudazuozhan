@@ -996,7 +996,7 @@
           html += `<span class="score-badge ${scoreCls}">${scoreLabel}</span>`;
           html += `</div>`;
         } else if (isBetting && isSelected && tierInfo) {
-          const starLbl = tierInfo.tier + '星';
+          const starLbl = TIER_LABEL[tierInfo.tier];
           html += `<div class="tier-info-col">`;
           html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
           html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
@@ -1660,26 +1660,26 @@
     // ═══════════════════════════════════════════════════════
 
     const TIER_GROUPS = [
-      { star: 5, label: '5星', groups: [
+      { star: 5, label: 'T1', groups: [
         { mnemonic: '1234', hands: [[1,8],[2,7],[3,6],[4,5]] },
         { mnemonic: '12',   hands: [[1,2],[2,3]] },
       ]},
-      { star: 4, label: '4星', groups: [
+      { star: 4, label: 'T2', groups: [
         { mnemonic: '127', hands: [[1,3],[2,4],[7,8]] },
         { mnemonic: '235', hands: [[2,5],[3,8],[5,8]] },
         { mnemonic: '631', hands: [[6,8],[3,4],[1,4]] },
       ]},
-      { star: 3, label: '3星', groups: [
+      { star: 3, label: 'T3', groups: [
         { mnemonic: '234',  hands: [[2,6],[3,5],[4,8]] },
         { mnemonic: '876',  hands: [[8,9],[7,9],[6,7]] },
         { mnemonic: '554',  hands: [[5,7],[5,6],[4,7]] },
         { mnemonic: '1156', hands: [[1,5],[1,1],[5,9],[6,9]] },
       ]},
-      { star: 2, label: '2星', groups: [
+      { star: 2, label: 'T4', groups: [
         { mnemonic: '4311', hands: [[4,9],[3,9],[1,6],[1,7]] },
         { mnemonic: '222',  hands: [[2,2],[2,8],[2,9]] },
       ]},
-      { star: 1, label: '1星', groups: [
+      { star: 1, label: 'T5', groups: [
         { mnemonic: '3348', hands: [[3,3],[3,7],[4,6],[8,8]] },
         { mnemonic: '479',  hands: [[4,4],[7,7],[9,9]] },
         { mnemonic: '156',  hands: [[1,9],[6,6],[5,5]] },
