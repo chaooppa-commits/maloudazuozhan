@@ -1063,11 +1063,6 @@
         html += `</div>`;
       }
 
-      // Stake picker (only for live game, not review)
-      if (isBetting && selectedTarget) {
-        html += buildStakePickerHtml(selectedTarget);
-      }
-
       return html;
     }
 
@@ -1157,9 +1152,11 @@
             ${reviewBtn}
           </div>
         `;
-        // Skip button: ghost style (white text, semi-transparent border)
+        // skip-slot: fixed 118px container; stake-picker fills it instead of blank spacer
+        // so the skip-ghost-btn below never shifts when an employee is selected
+        const slotContent = manualTarget ? buildStakePickerHtml(manualTarget) : '';
         skipArea.innerHTML = `
-          <div class="skip-spacer"></div>
+          <div class="skip-slot">${slotContent}</div>
           <button class="skip-ghost-btn" onclick="onBet('SKIP',0)">跳过本局</button>
         `;
       } else if (game.phase === 'result') {
