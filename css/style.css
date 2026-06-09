@@ -268,8 +268,10 @@ html, body {
 #game-screen {
   display: none;
   flex-direction: column;
-  min-height: 100vh;
-  padding-top: 4px;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 0;
   padding-bottom: 120px;
   background: var(--bg);
 }
@@ -678,7 +680,7 @@ html, body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--border);
-  padding: 8px 12px;
+  padding: 8px 12px 24px;
   z-index: 100;
   box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
 }
@@ -841,14 +843,19 @@ html, body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  min-height: 100vh;
-  padding: 24px;
-  padding-top: 4px;
-  padding-bottom: 24px;
-  text-align: center;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: var(--bg);
+  z-index: 200;
+}
+
+.end-scroll {
+  flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 24px;
+  padding-top: calc(16px + var(--safe-top));
+  padding-bottom: 80px;
 }
 
 /* ── 4a. 标题行: 昵称 · 第N场 + 时间戳, 左对齐 ──────── */
@@ -990,6 +997,13 @@ html, body {
   gap: 12px;
   width: 100%;
   max-width: 360px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: var(--bg);
+  z-index: 210;
 }
 
 .end-btn {
