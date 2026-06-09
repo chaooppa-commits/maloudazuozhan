@@ -1145,15 +1145,18 @@
       if (game.phase === 'betting') {
         const reviewBtn = _prevRoundData
           ? '<button class="bet-btn btn-pass" onclick="showReview()">回看</button>'
-          : '';
+          : '<button class="bet-btn btn-pass" disabled>回看</button>';
         bar.innerHTML = `
           <div class="action-row-single">
             <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
             ${reviewBtn}
           </div>
         `;
-        // Skip button in page area (same size as continue/next-round button)
-        skipArea.innerHTML = `<button class="result-action-btn primary" onclick="onBet('SKIP',0)" style="width:100%">跳过本局</button>`;
+        // Skip button: ghost style (white text, semi-transparent border)
+        skipArea.innerHTML = `
+          <div class="skip-spacer"></div>
+          <button class="skip-ghost-btn" onclick="onBet('SKIP',0)">跳过本局</button>
+        `;
       } else if (game.phase === 'result') {
         bar.innerHTML = '';
         skipArea.innerHTML = '';
@@ -1589,7 +1592,7 @@
       // Shadow curve（退场后延伸为水平直线）
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.setLineDash([]);
         ctx.beginPath();
         for (let i = 0; i < totalPoints; i++) {
@@ -1664,7 +1667,7 @@
       // Shadow curve
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.setLineDash([]);
         ctx.beginPath();
         for (let i = 0; i < totalPoints; i++) {
@@ -1693,7 +1696,7 @@
       ctx.restore();
     }
 
-    function _drawCandleChart(canvasId, maxRounds) {
+    function _drawCandleChart(canvasId) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -1705,14 +1708,21 @@
 
       const data = game.pnlHistory;
       const shData = shadow.pnlHistory;
-
-      if (data.length < 2) return;
-
       const buyin = game._initialPurse || INITIAL_PURSE;
 
-      // 固定纵轴可见范围：50筹码窗口，以buyin为中心
-      const CHIPS_VISIBLE = 50;
-      // 根据实际数据计算完整纵轴范围
+      // 新局开始时 data=[0]，清除旧画布残留
+      if (data.length < 2) {
+        canvas._cacheW = 0;
+        canvas._cacheH = 0;
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        ctx.restore();
+        return;
+      }
+
+      // 纵轴：40筹码可见窗口，以buyin为中心
+      const CHIPS_VISIBLE = 40;
       const allPurses = [buyin + Math.min(...data), buyin + Math.max(...data)];
       if (shData.length >= 2) {
         allPurses.push(buyin + Math.min(...shData));
@@ -1720,27 +1730,28 @@
       }
       const dataMinPurse = Math.min(...allPurses);
       const dataMaxPurse = Math.max(...allPurses);
-      // 以buyin为中心，至少50筹码
-      const centerPurse = buyin;
-      let MIN_PURSE = centerPurse - CHIPS_VISIBLE / 2;
-      let MAX_PURSE = centerPurse + CHIPS_VISIBLE / 2;
-      // 如果数据超出50筹码窗口，扩展canvas高度让用户可以上下滑动
+      let MIN_PURSE = buyin - CHIPS_VISIBLE / 2;
+      let MAX_PURSE = buyin + CHIPS_VISIBLE / 2;
+      // 数据超出窗口时扩展canvas高度（上下滑动）
       if (dataMinPurse < MIN_PURSE) MIN_PURSE = dataMinPurse - 5;
       if (dataMaxPurse > MAX_PURSE) MAX_PURSE = dataMaxPurse + 5;
       const totalRange = MAX_PURSE - MIN_PURSE;
-      // canvas高度按比例：50筹码 = visibleH
       const pxPerChip = visibleH / CHIPS_VISIBLE;
       const canvasH = Math.ceil(totalRange * pxPerChip);
 
-      // 确定显示范围（最多显示全部局数）
+      // 横轴：25局填满100%宽度
       const totalRounds = data.length - 1;
-      // 40局填满100%宽度 → 计算每根蜡烛宽度
-      const ROUNDS_PER_VIEW = 30;
-      const candleTotalWidth = Math.max(visibleW, totalRounds * (visibleW / ROUNDS_PER_VIEW));
+      const ROUNDS_PER_VIEW = 25;
+      // 超过25局时只展示最近25局
+      let startIdx = 0;
+      if (totalRounds > ROUNDS_PER_VIEW) {
+        startIdx = totalRounds - ROUNDS_PER_VIEW;
+      }
+      const displayCount = totalRounds - startIdx;
       const unitW = visibleW / ROUNDS_PER_VIEW;
       const CANDLE_W = Math.max(2, Math.floor(unitW * 0.75));
       const GAP = Math.max(1, Math.floor(unitW * 0.25));
-      const contentW = Math.max(candleTotalWidth, totalRounds * (CANDLE_W + GAP));
+      const contentW = displayCount * (CANDLE_W + GAP);
 
       // 设置canvas尺寸
       if (canvas._cacheW !== contentW || canvas._cacheH !== canvasH || canvas._cacheDpr !== dpr) {
@@ -1772,14 +1783,14 @@
       ctx.lineTo(contentW, buyinY);
       ctx.stroke();
 
-      // 绘制蜡烛（开盘=上一局 purse，收盘=当前 purse）
-      for (let i = 0; i < totalRounds; i++) {
-        const openPurse = buyin + data[i];
-        const closePurse = buyin + data[i + 1];
+      // 绘制蜡烛
+      for (let i = 0; i < displayCount; i++) {
+        const di = startIdx + i;
+        const openPurse = buyin + data[di];
+        const closePurse = buyin + data[di + 1];
         const x = i * (CANDLE_W + GAP);
 
         if (openPurse === closePurse) {
-          // 跳过：灰色短横线
           ctx.strokeStyle = 'rgba(156,163,175,0.5)';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -1791,19 +1802,19 @@
           ctx.fillStyle = color;
           const topY = getY(Math.max(openPurse, closePurse));
           const bottomY = getY(Math.min(openPurse, closePurse));
-          const candleH = bottomY - topY;
-          ctx.fillRect(x, topY, CANDLE_W, Math.max(1, candleH));
+          ctx.fillRect(x, topY, CANDLE_W, Math.max(1, bottomY - topY));
         }
       }
 
       // 绘制影子折线（白色实线）
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.setLineDash([]);
         ctx.beginPath();
-        for (let i = 0; i < totalRounds; i++) {
-          const shIdx = Math.min(i + 1, shData.length - 1);
+        for (let i = 0; i < displayCount; i++) {
+          const di = startIdx + i;
+          const shIdx = Math.min(di + 1, shData.length - 1);
           const shPurse = buyin + shData[shIdx];
           const x = i * (CANDLE_W + GAP) + CANDLE_W / 2;
           const y = getY(shPurse);
@@ -1816,12 +1827,23 @@
 
       ctx.restore();
 
-      // 默认滚动到最右侧+buyin居中（最新数据）
+      // 自动滚动：水平到最右侧，垂直到最新筹码位置
       requestAnimationFrame(() => {
         container.scrollLeft = container.scrollWidth - container.clientWidth;
-        // 垂直滚动：让buyin参考线尽量居中
-        const buyinScrollTop = buyinY - visibleH / 2;
-        container.scrollTop = Math.max(0, buyinScrollTop);
+        // 垂直滚动：让最新筹码位置在可见区域内
+        const latestPurse = buyin + data[data.length - 1];
+        const latestCanvasY = getY(latestPurse);
+        const currentScrollTop = container.scrollTop;
+        // latestCanvasY是相对于canvas顶部的位置
+        // 可见窗口: currentScrollTop ~ currentScrollTop + visibleH
+        if (latestCanvasY < currentScrollTop || latestCanvasY > currentScrollTop + visibleH) {
+          // 最新筹码超出可见区域，滚动到居中
+          container.scrollTop = Math.max(0, latestCanvasY - visibleH / 2);
+        } else {
+          // 默认以buyin线居中
+          const buyinScrollTop = buyinY - visibleH / 2;
+          container.scrollTop = Math.max(0, buyinScrollTop);
+        }
       });
     }
 
