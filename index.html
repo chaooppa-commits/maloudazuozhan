@@ -150,18 +150,21 @@
       </div>
     </div>
 
-    <!-- Card table -->
-    <div class="card-table" id="card-table">
-      <!-- Rendered dynamically -->
-    </div>
+    <!-- Scrollable body: card table + results + skip -->
+    <div class="game-body" id="game-body">
+      <!-- Card table -->
+      <div class="card-table" id="card-table">
+        <!-- Rendered dynamically -->
+      </div>
 
-    <!-- Result section (hidden until reveal) -->
-    <div class="result-section" id="result-section">
-      <!-- Rendered dynamically -->
-    </div>
+      <!-- Result section (hidden until reveal) -->
+      <div class="result-section" id="result-section">
+        <!-- Rendered dynamically -->
+      </div>
 
-    <!-- Skip button area (in-page, same size as continue button) -->
-    <div class="skip-area" id="skip-area"></div>
+      <!-- Skip button area (in-page, same size as continue button) -->
+      <div class="skip-area" id="skip-area"></div>
+    </div>
 
     <!-- Action bar -->
     <div class="action-bar" id="action-bar">
@@ -651,6 +654,8 @@
         el.style.display = (s === id) ? 'flex' : 'none';
       });
       window.scrollTo(0, 0);
+      const gb = document.getElementById('game-body');
+      if (gb) gb.scrollTop = 0;
     }
 
     // ═══════════════════════════════════════════════════════
