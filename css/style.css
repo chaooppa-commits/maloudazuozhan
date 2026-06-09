@@ -668,15 +668,18 @@ html, body {
 .skip-area {
   padding: 0 12px 12px;
 }
-/* Spacer reserves vertical space matching result-banner + action-eval-row */
-.skip-spacer {
+/* Fixed-height slot matching result-banner + action-eval-row combined height.
+   When stake-picker is shown it lives inside this slot so skip btn never moves. */
+.skip-slot {
   height: 118px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 /* Ghost-style skip button */
 .skip-ghost-btn {
   display: block;
   width: 100%;
-  margin-top: 12px;
   padding: 14px 0;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--radius);
@@ -780,13 +783,13 @@ html, body {
   gap: 8px;
 }
 
-/* Stake picker row below cards */
+/* Stake picker row — lives inside skip-slot */
 .stake-picker {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
-  padding: 0 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .action-row-main {
@@ -983,9 +986,7 @@ html, body {
 
 /* ── 4b. PnL 收益曲线图(含右侧Y轴标签) ─────────────── */
 .end-chart-slider {
-  margin: 0px 0px 12px 0px;
-  
-   
+  margin-bottom: 12px;
 }
 .end-chart-slider .chart-track {
   max-width: 400px;
@@ -1545,7 +1546,7 @@ html, body {
 /* Chart slider (candle + line) */
 /* ── 3g. 游戏中图表甬道(candle + line 左右滑动) ────── */
 .chart-slider {
-  margin: 8px 12px 4px;
+  margin: 12px 0px 12px;
   overflow: hidden;
   flex-shrink: 0;
   background: var(--bg);
