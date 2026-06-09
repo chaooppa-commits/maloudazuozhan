@@ -156,8 +156,8 @@
       <!-- 出手规范分析 -->
     </div>
     <div class="end-actions">
-      <button class="end-btn secondary" onclick="downloadLog()">日志</button>
       <button class="end-btn primary" onclick="backToStart()">再战</button>
+      <button class="end-btn text-btn" onclick="downloadLog()">日志</button>
     </div>
     </div>
   </div>
@@ -1070,6 +1070,15 @@
         html += `</div>`;
       }
 
+      const ip = game._initialPurse || INITIAL_PURSE;
+      const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0 || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2;
+      if (gameOver) {
+        html += `<button class="result-action-btn primary" onclick="endGame('normal')" style="margin-top:12px;width:100%">查看结算</button>`;
+      } else {
+        html += `<button class="result-action-btn primary" onclick="goNextRound()" style="margin-top:12px;width:100%">下一局 →</button>`;
+        html += `<button class="result-text-btn" onclick="showAnalysis()">分析</button>`;
+      }
+
       return html;
     }
 
@@ -1094,22 +1103,7 @@
           </div>
         `;
       } else if (game.phase === 'result') {
-        const ip = game._initialPurse || INITIAL_PURSE;
-        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0 || game.obsPurse <= ip * 0.4 || game.bossPurse <= ip * 0.2;
-        if (gameOver) {
-          bar.innerHTML = `
-            <div class="action-row-single">
-              <button class="continue-btn" onclick="endGame('normal')">查看结算</button>
-            </div>
-          `;
-        } else {
-          bar.innerHTML = `
-            <div class="action-row-single">
-              <button class="result-action-btn secondary" onclick="showAnalysis()">分析</button>
-              <button class="result-action-btn primary" onclick="goNextRound()">下一局 →</button>
-            </div>
-          `;
-        }
+        bar.innerHTML = '';
       } else {
         bar.innerHTML = '';
       }
@@ -1496,80 +1490,17 @@
     }
 
     function renderPnlChart() {
-      const canvas = document.getElementById('pnl-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const w = Math.floor(rect.width);
-      const h = Math.floor(rect.height);
-      const dpr = window.devicePixelRatio || 2;
-
-      // 画布尺寸只在变化时重置，防止移动端 WebKit 内存泄漏/闪退
-      if (canvas._cacheW !== w || canvas._cacheH !== h || canvas._cacheDpr !== dpr) {
-        canvas._cacheW = w;
-        canvas._cacheH = h;
-        canvas._cacheDpr = dpr;
-        canvas.width = Math.floor(w * dpr);
-        canvas.height = Math.floor(h * dpr);
-      }
-      if (w <= 0 || h <= 0) return;
-
-      ctx.save();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-
-      const data = game.pnlHistory;
-      const shData = shadow.pnlHistory;
-
-      if (data.length < 2) {
-        ctx.restore();
-        return;
-      }
-
-      const totalPoints = data.length;  // 以观察者为基准坐标系
-
-      const allVals = [...data, ...shData, 0];
-      const minVal = Math.min(...allVals);
-      const maxVal = Math.max(...allVals);
-      const range = Math.max(maxVal - minVal, 1);
-
+      _drawCandleChart('pnl-canvas', 50);
       updatePnlLabels('pnl-labels');
-
-      // Shadow curve（退场后延伸为水平直线，保持与观察者同一横向坐标系）
-      if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);  // 退场后虚线
-        ctx.beginPath();
-        for (let i = 0; i < totalPoints; i++) {
-          // 影子数据不足时，用最后一个值延伸（水平直线）
-          const val = i < shData.length ? shData[i] : shData[shData.length - 1];
-          const x = (i / (totalPoints - 1)) * w;
-          const y = h - ((val - minVal) / range) * (h - 8) - 4;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      // Player curve
-      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let i = 0; i < data.length; i++) {
-        const x = (i / (totalPoints - 1)) * w;
-        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-
-      ctx.restore();
     }
 
     function renderEndPnlChart() {
-      const canvas = document.getElementById('end-pnl-canvas');
+      _drawCandleChart('end-pnl-canvas', null);
+      updatePnlLabels('end-pnl-labels');
+    }
+
+    function _drawCandleChart(canvasId, maxRounds) {
+      const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -1598,43 +1529,89 @@
         return;
       }
 
-      const totalPoints = data.length;  // 以观察者为基准坐标系
+      // 计算每局收益
+      const profits = [];
+      for (let i = 1; i < data.length; i++) {
+        profits.push(data[i] - data[i - 1]);
+      }
 
-      const allVals = [...data, ...shData, 0];
+      // 影子收益
+      const shProfits = [];
+      for (let i = 1; i < shData.length; i++) {
+        shProfits.push(shData[i] - shData[i - 1]);
+      }
+
+      // 确定显示范围
+      let startIdx = 0;
+      if (maxRounds && profits.length > maxRounds) {
+        startIdx = profits.length - maxRounds;
+      }
+      const displayCount = profits.length - startIdx;
+
+      // 确定 Y 轴范围
+      const displayProfits = profits.slice(startIdx);
+      const displayShProfits = shProfits.slice(startIdx);
+      const allVals = [...displayProfits, ...displayShProfits, 0];
       const minVal = Math.min(...allVals);
       const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
 
-      updatePnlLabels('end-pnl-labels');
+      // 零线位置
+      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
 
-      // Shadow curve（退场后延伸为水平虚线）
-      if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
+      // 绘制背景零线
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+
+      // 绘制蜡烛
+      const padding = 2;
+      const availW = w - padding * 2;
+      const candleW = Math.max(1, Math.floor(availW / displayCount) - 1);
+      const gap = 1;
+
+      for (let i = 0; i < displayCount; i++) {
+        const profit = displayProfits[i];
+        const x = padding + i * (candleW + gap);
+
+        if (profit === 0) {
+          // 跳过：灰色短横线
+          ctx.strokeStyle = 'rgba(156,163,175,0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          const dashLen = Math.max(2, candleW * 0.6);
+          ctx.moveTo(x + (candleW - dashLen) / 2, zeroY);
+          ctx.lineTo(x + (candleW + dashLen) / 2, zeroY);
+          ctx.stroke();
+        } else {
+          // 正收益绿色，负收益红色
+          const color = profit > 0 ? 'rgba(16,185,129,0.85)' : 'rgba(244,63,94,0.85)';
+          ctx.fillStyle = color;
+          const candleH = Math.max(1, Math.abs(profit) / range * (h - 8));
+          const y = profit > 0 ? zeroY - candleH : zeroY;
+          ctx.fillRect(x, y, candleW, candleH);
+        }
+      }
+
+      // 绘制影子折线（灰色）
+      if (displayShProfits.length >= 1) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.6)';
         ctx.lineWidth = 1;
-        ctx.setLineDash(shData.length < totalPoints ? [4, 3] : []);
+        ctx.setLineDash([3, 2]);
         ctx.beginPath();
-        for (let i = 0; i < totalPoints; i++) {
-          const val = i < shData.length ? shData[i] : shData[shData.length - 1];
-          const x = (i / (totalPoints - 1)) * w;
-          const y = h - ((val - minVal) / range) * (h - 8) - 4;
+        for (let i = 0; i < displayCount; i++) {
+          const shProfit = i < displayShProfits.length ? displayShProfits[i] : 0;
+          const x = padding + i * (candleW + gap) + candleW / 2;
+          const y = h - ((shProfit - minVal) / range) * (h - 8) - 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
         ctx.setLineDash([]);
       }
-
-      // Player curve
-      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let i = 0; i < data.length; i++) {
-        const x = (i / (totalPoints - 1)) * w;
-        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
 
       ctx.restore();
     }
