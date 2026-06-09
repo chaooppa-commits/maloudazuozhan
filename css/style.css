@@ -55,6 +55,7 @@
 
 html, body {
   height: 100%;
+  height: 100dvh; /* 优先使用动态视口高度 */
   width: 100%;
   margin: 0;
   padding: 0;
