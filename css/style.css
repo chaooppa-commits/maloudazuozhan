@@ -279,7 +279,7 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-top: 0;
-  padding-bottom: 130px;
+  padding-bottom: 0px;
   background: var(--bg);
 }
 
