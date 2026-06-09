@@ -983,7 +983,9 @@ html, body {
 
 /* ── 4b. PnL 收益曲线图(含右侧Y轴标签) ─────────────── */
 .end-chart-slider {
-  margin-bottom: 12px;
+  margin: 0px 0px 12px 0px;
+  
+   
 }
 .end-chart-slider .chart-track {
   max-width: 400px;
