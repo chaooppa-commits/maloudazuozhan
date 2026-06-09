@@ -438,10 +438,10 @@ html, body {
   flex-shrink: 0;
 }
 
-.player-label.boss { color: var(--accent); }
-.player-label.emp-a { color: var(--blue); }
-.player-label.emp-b { color: var(--green); }
-.player-label.emp-c { color: var(--orange); }
+.player-label.boss { color: var(--text-dim); }
+.player-label.emp-a { color: var(--text-dim); }
+.player-label.emp-b { color: var(--text-dim); }
+.player-label.emp-c { color: var(--text-dim); }
 
 .cards-display {
   display: flex;
@@ -496,7 +496,7 @@ html, body {
 .card.hidden {
   background: var(--card-bg);
   border: none;
-  color: var(--text-dim);
+  color: rgba(156,163,175,0.22);
 }
 
 .card.revealed {
@@ -530,6 +530,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.player-row > .blessing-hint {
+  flex: 0 0 auto;
+  min-width: auto;
 }
 
 .bless-consume {
@@ -1531,7 +1536,7 @@ html, body {
 [data-theme="light"] .card.hidden {
   background: #f0f0f4;
   border: none;
-  color: var(--text-dim);
+  color: rgba(107,114,128,0.22);
   box-shadow: none;
 }
 
