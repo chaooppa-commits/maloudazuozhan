@@ -278,7 +278,7 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-top: 0;
-  padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 130px;
   background: var(--bg);
 }
 
