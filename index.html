@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>马喽大作战</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -202,6 +202,11 @@
         <div id="quiz-area"></div>
       </div>
     </div>
+  </div>
+
+  <!-- ═══════ Win Rate Modal ═══════ -->
+  <div class="winrate-overlay" id="winrate-overlay" onclick="if(event.target===this)closeWinRate()">
+    <div class="winrate-sheet" id="winrate-sheet"></div>
   </div>
 
   <script src="js/game.js?v=3"></script>
@@ -728,6 +733,7 @@
         const _ea = hands[i][0], _eb = hands[i][1];
         const _eKey = Math.min(_ea, _eb) + ',' + Math.max(_ea, _eb);
         const is1234 = '1,8 2,7 3,6 4,5'.split(' ').includes(_eKey);
+
         let stake = 0;
         if (tierGap === 2 || (tierGap === 1 && is1234)) {
           stake = 4;
@@ -1010,8 +1016,8 @@
         html += `</div>`;
       }
 
-      // Stake picker (only for live game, not review)
-      if (isBetting && selectedTarget) {
+      // Stake picker + 算胜率 (always show during betting; disabled if no target selected)
+      if (isBetting) {
         html += buildStakePickerHtml(selectedTarget);
       }
 
@@ -1193,25 +1199,31 @@
       }
     }
 
-    function buildStakePickerHtml(target) {
+    function buildStakePickerHtml(targetOrNull) {
+      const hasTarget = targetOrNull !== null && targetOrNull;
       const ks = game.kellyMode ? kellyStake(game.obsPurse, game.bossPurse) : 0;
-      let html = '<div class="stake-picker">';
+      let html = '<div class="stake-picker"';
+      if (!hasTarget) html += ' data-no-target';
+      html += '>';
 
       if (game.kellyMode) {
-        html += `<span class="stake-picker-label">押${target}</span>`;
-        html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${ks})">$${ks}</button>`;
+        html += `<button class="bet-btn btn-stake-opt" ${hasTarget ? `onclick="onBetAndReset('${targetOrNull}',${ks})"` : 'disabled'}>$${ks}</button>`;
       } else {
         const validStakes = STAKE_OPTIONS.filter(s => s <= game.obsPurse && s <= game.bossPurse);
-        html += `<span class="stake-picker-label">押${target}</span>`;
-        for (const s of validStakes) {
+        for (const s of STAKE_OPTIONS) {
+          const enabled = hasTarget && validStakes.includes(s);
           if (s === 16) {
-            html += `<button class="bet-btn btn-stake-opt btn-stake-max" onclick="confirmStake16('${target}')">$${s}</button>`;
+            html += `<button class="bet-btn btn-stake-opt btn-stake-max" ${enabled ? `onclick="confirmStake16('${targetOrNull}')"` : 'disabled'}>$${s}</button>`;
           } else {
-            html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
+            html += `<button class="bet-btn btn-stake-opt" ${enabled ? `onclick="onBetAndReset('${targetOrNull}',${s})"` : 'disabled'}>$${s}</button>`;
           }
         }
       }
 
+      // 算胜率 plain-text button (always available)
+      html += '</div>'; // close stake-picker
+      html += '<div class="wr-text-btn-row">';
+      html += `<button class="wr-text-btn" onclick="showWinRate()">算胜率</button>`;
       html += '</div>';
       return html;
     }
@@ -2054,6 +2066,297 @@
           </div>
         </div>
       `;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Win Rate Calculator (Integrated from 斗口胜率计算器)
+    // ═══════════════════════════════════════════════════════
+
+    let _wrResult = null;
+    let _wrTarget = null;  // 'A'|'B'|'C'
+    let _wrLevel = 4;      // recommended stake: 4/8/12/0(skip)
+
+    function _wrBinomial(n, k) {
+      if (k < 0 || k > n) return 0;
+      if (k === 0 || k === n) return 1;
+      k = Math.min(k, n - k);
+      let r = 1;
+      for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+      return Math.round(r);
+    }
+
+    function _wrCalcPoints(tc) {
+      const s = tc[0] + tc[1];
+      return s > 10 ? s % 10 : s;
+    }
+
+    function _wrFindDoukou(hand) {
+      if (hand.length !== 5) return null;
+      let best = null, bestPts = -1;
+      for (let i = 0; i < 5; i++)
+        for (let j = i + 1; j < 5; j++)
+          for (let k = j + 1; k < 5; k++) {
+            const ts = hand[i] + hand[j] + hand[k];
+            if (ts === 10 || ts === 20) {
+              const rem = hand.filter((_, idx) => idx !== i && idx !== j && idx !== k);
+              const pts = _wrCalcPoints(rem);
+              if (pts > bestPts) { bestPts = pts; best = { points: [...rem] }; }
+            }
+          }
+      return best;
+    }
+
+    function _wrEnumerate(deckCounts, k, cb) {
+      const cur = new Array(9).fill(0);
+      function rec(idx, rem) {
+        if (idx === 9) {
+          if (rem === 0) {
+            let w = 1;
+            for (let v = 0; v < 9; v++) w *= _wrBinomial(deckCounts[v + 1], cur[v]);
+            if (w > 0) cb([...cur], w);
+          }
+          return;
+        }
+        for (let c = 0, mx = Math.min(rem, deckCounts[idx + 1]); c <= mx; c++) {
+          cur[idx] = c; rec(idx + 1, rem - c);
+        }
+        cur[idx] = 0;
+      }
+      rec(0, k);
+    }
+
+    function calculateWinRate(empCards, bossCards, otherCards) {
+      const CC = {1:8,2:4,3:4,4:4,5:4,6:4,7:4,8:4,9:4};
+      const counts = {...CC};
+      for (const c of [...empCards,...bossCards,...otherCards]) counts[c] = Math.max(0, counts[c] - 1);
+
+      const eN = 5 - empCards.length, bN = 5 - bossCards.length;
+      let tot=0, win=0, lose=0, p2x=0;
+      let eDk=0, bDk=0, e10=0, b10=0;
+      const sc = {ehbn:0,bpw:0,eno:0,bpl:0,bpt:0};
+
+      _wrEnumerate(counts, eN, (eMs, eW) => {
+        const eH = [...empCards];
+        for (let v=1;v<=9;v++) for(let i=0;i<eMs[v-1];i++) eH.push(v);
+        const eR = _wrFindDoukou(eH);
+        if(eR){eDk+=eW; const p=_wrCalcPoints(eR.points); if(p===10)e10+=eW;}
+
+        const bC={...counts}; for(let v=1;v<=9;v++) bC[v]-=eMs[v-1];
+
+        _wrEnumerate(bC, bN, (bMs, bW) => {
+          const bH=[...bossCards];
+          for(let v=1;v<=9;v++) for(let i=0;i<bMs[v-1];i++) bH.push(v);
+          const bR=_wrFindDoukou(bH);
+          const w=eW*bW; tot+=w;
+          if(bR){bDk+=w; const p=_wrCalcPoints(bR.points); if(p===10)b10+=w;}
+
+          if(eR&&!bR){win+=w;sc.ehbn+=w;if((eR.points[0]+eR.points[1])===10)p2x+=w;}
+          else if(!eR){lose+=w;sc.eno+=w;}
+          else{
+            const ep=_wrCalcPoints(eR.points), bp=_wrCalcPoints(bR.points);
+            if(ep>bp){win+=w;sc.bpw+=w;if((eR.points[0]+eR.points[1])===10)p2x+=w;}
+            else if(ep<bp){lose+=w;sc.bpl+=w;}
+            else{lose+=w;sc.bpt+=w;}
+          }
+        });
+      });
+
+      if(tot===0) return null;
+      const tw=win/tot, px=p2x/tot;
+      return {
+        totalWin:tw, totalLoss:lose/tot,
+        payout2x:px,
+        weightedWR:tw+px,
+        empDkRate:eDk/tot, bossDkRate:bDk/tot,
+        emp10Rate:eDk>0?e10/eDk:0, boss10Rate:bDk>0?b10/bDk:0,
+        sc:{
+          empHasBossNo:sc.ehbn/tot,
+          bothPtsWin:sc.bpw/tot,
+          empNo:sc.eno/tot,
+          bothPtsLose:sc.bpl/tot,
+          bothPtsTie:sc.bpt/tot
+        }
+      };
+    }
+
+    function showWinRate() {
+      try {
+        tap();
+        if (game.phase !== 'betting' || !game.hands) return;
+
+        // Find target employee: selected or best by shadow strategy
+        let target = manualTarget;
+        if (!target) {
+          const allVisible = [];
+          for (let i = 0; i < 4; i++) allVisible.push(game.hands[i][0], game.hands[i][1]);
+
+          const bossInfo = lookupTier(game.hands[0][0], game.hands[0][1]);
+          let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
+          const bossPower = bossInfo ? (bossInfo.mp || bossInfo.p_eq) : 40;
+          const bossTierDrop = countUsedBlessings(game.hands[0][0], game.hands[0][1], allVisible);
+          if (bossTierDrop >= 1) bossTier = Math.max(1, bossTier - bossTierDrop);
+
+          let bestTarget = null;
+          let bestStake = 0;
+          let bestPowerGap = -999;
+
+          for (let i = 1; i <= 3; i++) {
+            const lbl = ['A', 'B', 'C'][i - 1];
+            const empInfo = lookupTier(game.hands[i][0], game.hands[i][1]);
+            let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
+            const empPower = empInfo ? (empInfo.mp || empInfo.p_eq) : 40;
+            const empTierDrop = countUsedBlessings(game.hands[i][0], game.hands[i][1], allVisible);
+            if (empTierDrop >= 1) empTier = Math.max(1, empTier - empTierDrop);
+
+            const powerGap = empPower - bossPower;
+            const tierGap = empTier - bossTier;
+            const _ea = game.hands[i][0], _eb = game.hands[i][1];
+            const _eKey = Math.min(_ea, _eb) + ',' + Math.max(_ea, _eb);
+            const is1234 = '1,8 2,7 3,6 4,5'.split(' ').includes(_eKey);
+
+            let stake = 0;
+            if (tierGap === 2 || (tierGap === 1 && is1234)) stake = 4;
+            else if (tierGap === 3) stake = 8;
+            else if (tierGap >= 4) stake = 12;
+
+            // 选最高注额的候选（注额相同时选powerGap更大的）
+            // 即使stake=0也记录，保证始终有一组牌可算
+            if (stake > bestStake || (stake === bestStake && powerGap > bestPowerGap)) {
+              bestStake = stake;
+              bestTarget = lbl;
+              bestPowerGap = powerGap;
+            }
+          }
+          target = bestTarget;
+        }
+        if (!target) return;
+
+        const empIdx = {A:1,B:2,C:3}[target];
+        const empCards = [game.hands[empIdx][0], game.hands[empIdx][1]];
+        const bossCards = [game.hands[0][0], game.hands[0][1]];
+        const otherCards = [];
+        for (const lbl of ['A','B','C']) {
+          if (lbl === target) continue;
+          const idx = {A:1,B:2,C:3}[lbl];
+          otherCards.push(game.hands[idx][0], game.hands[idx][1]);
+        }
+
+        _wrResult = calculateWinRate(empCards, bossCards, otherCards);
+        if (!_wrResult) return;
+        _wrTarget = target;
+
+        // Determine recommended stake via tier gap (same logic as shadowDecide)
+        const empInfo = lookupTier(game.hands[empIdx][0], game.hands[empIdx][1]);
+        const bossInfo = lookupTier(game.hands[0][0], game.hands[0][1]);
+        let eTier = empInfo ? Math.floor(empInfo.tier) : 3;
+        let bTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
+        const allVis = [];
+        for(let i=0;i<4;i++) allVis.push(game.hands[i][0], game.hands[i][1]);
+        const eDrop = countUsedBlessings(game.hands[empIdx][0], game.hands[empIdx][1], allVis);
+        const bDrop = countUsedBlessings(game.hands[0][0], game.hands[0][1], allVis);
+        if(eDrop>=1) eTier = Math.max(1, eTier-eDrop);
+        if(bDrop>=1) bTier = Math.max(1, bTier-bDrop);
+        const tierGap = eTier - bTier;
+        const _ea=game.hands[empIdx][0], _eb=game.hands[empIdx][1];
+        const _eKey=Math.min(_ea,_eb)+','+Math.max(_ea,_eb);
+        const is1234='1,8 2,7 3,6 4,5'.split(' ').includes(_eKey);
+
+        if(tierGap>=4) _wrLevel=12;
+        else if(tierGap===3) _wrLevel=8;
+        else if(tierGap===2||(tierGap===1&&is1234)) _wrLevel=4;
+        else _wrLevel=0;
+
+        _renderWinRateModal();
+        document.getElementById('winrate-overlay').classList.add('show');
+      } catch(e) { console.error('showWinRate error:', e); }
+    }
+
+    function _renderWinRateModal() {
+      const r = _wrResult;
+      const p = v => (v*100).toFixed(1)+'%';
+      const empIdx = {A:1,B:2,C:3}[_wrTarget];
+      const eCards = [game.hands[empIdx][0], game.hands[empIdx][1]];
+      const bCards = [game.hands[0][0], game.hands[0][1]];
+
+      let h = '';
+      // Header
+      h += '<div class="winrate-header">';
+      h += '<div class="winrate-header-cards">';
+      h += '<span style="color:var(--green)">['+eCards.join(',')+'] 员工'+_wrTarget+'</span>';
+      h += '<span class="wr-vs">vs</span>';
+      h += '<span style="color:var(--accent)">['+bCards.join(',')+'] 老板</span>';
+      h += '</div>';
+      h += '<button class="winrate-close" onclick="closeWinRate()">✕</button>';
+      h += '</div>';
+
+      // Level tabs
+      h += '<div class="winrate-level-tabs">';
+      const levels = [{l:'大注',v:12},{l:'中注',v:8},{l:'小注',v:4},{l:'不出手',v:0}];
+      for (const lv of levels) {
+        const active = _wrLevel === lv.v ? ' active' : '';
+        const skipCls = lv.v === 0 ? ' skip-tab' : '';
+        h += '<button class="winrate-level-tab'+skipCls+active+'" onclick="wrSelectLevel('+lv.v+')">'+lv.l+'</button>';
+      }
+      h += '</div>';
+
+      // Stats
+      h += '<div class="winrate-stats">';
+      h += '<div class="winrate-stat-row"><span class="winrate-stat-label">点数胜率</span><span class="winrate-stat-value '+(r.totalWin>=0.5?'positive':'negative')+'">'+p(r.totalWin)+'</span></div>';
+      h += '<div class="winrate-stat-row"><span class="winrate-stat-label">加权胜率</span><span class="winrate-stat-value '+(r.weightedWR>=0.5?'positive':'negative')+'">'+p(r.weightedWR)+'</span></div>';
+      h += '</div>';
+
+      // Doukou & 10点
+      h += '<div class="winrate-stats" style="margin-top:2px">';
+      h += '<div class="winrate-stat-row"><span class="winrate-stat-label">斗口率</span><div class="winrate-split"><div class="winrate-split-item"><div class="wr-split-label">员工</div><div class="wr-split-val" style="color:var(--green)">'+p(r.empDkRate)+'</div></div><div class="winrate-split-item"><div class="wr-split-label">老板</div><div class="wr-split-val" style="color:var(--accent)">'+p(r.bossDkRate)+'</div></div></div></div>';
+      h += '<div class="winrate-stat-row"><span class="winrate-stat-label">10点</span><div class="winrate-split"><div class="winrate-split-item"><div class="wr-split-label">员工</div><div class="wr-split-val" style="color:var(--gold)">'+p(r.emp10Rate)+'</div></div><div class="winrate-split-item"><div class="wr-split-label">老板</div><div class="wr-split-val" style="color:var(--gold)">'+p(r.boss10Rate)+'</div></div></div></div>';
+      h += '</div>';
+
+      // Scenarios
+      h += '<div class="winrate-scenarios">';
+      h += '<div class="winrate-sc-title">各场景概率</div>';
+      const scenarios = [
+        {l:'员工斗口 & 老板无斗口',v:r.sc.empHasBossNo,t:'win'},
+        {l:'员工点 > 老板点',v:r.sc.bothPtsWin,t:'win'},
+        {l:'员工无斗口',v:r.sc.empNo,t:'lose'},
+        {l:'员工点 < 老板点',v:r.sc.bothPtsLose,t:'lose'},
+        {l:'员工点 = 老板点(平归老板)',v:r.sc.bothPtsTie,t:'lose'}
+      ];
+      for (const s of scenarios) {
+        h += '<div class="winrate-sc-row wr-sc-'+s.t+'"><span class="wr-sc-label">'+s.l+'</span><span class="wr-sc-val">'+p(s.v)+'</span></div>';
+      }
+      h += '</div>';
+
+      // Action button
+      h += '<div class="winrate-action">';
+      if (_wrLevel > 0) {
+        h += '<button class="wr-action-btn bet" onclick="wrAction()">下注 $'+_wrLevel+'</button>';
+      } else {
+        h += '<button class="wr-action-btn skip" onclick="wrAction()">跳过</button>';
+      }
+      h += '</div>';
+
+      document.getElementById('winrate-sheet').innerHTML = h;
+    }
+
+    function wrSelectLevel(level) {
+      _wrLevel = level;
+      _renderWinRateModal();
+    }
+
+    function closeWinRate() {
+      tap();
+      document.getElementById('winrate-overlay').classList.remove('show');
+    }
+
+    function wrAction() {
+      tap();
+      document.getElementById('winrate-overlay').classList.remove('show');
+      if (_wrLevel > 0) {
+        manualTarget = null;
+        onBet(_wrTarget, _wrLevel);
+      } else {
+        onBet('SKIP', 0);
+      }
     }
 
     // ═══════════════════════════════════════════════════════
