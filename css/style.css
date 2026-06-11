@@ -1870,3 +1870,51 @@ html, body {
   font-size: 0.8rem;
   padding: 4px 0 16px;
 }
+
+/* ═══════════════════════════════════════════════════
+   Winrate Calculator Modal 胜率计算弹窗
+══════════════════════════════════════════════════ */
+.winrate-overlay { position:fixed; bottom:0; left:0; right:0; top:0; background:rgba(0,0,0,0.5); z-index:150; display:none; align-items:flex-end; justify-content:center; }
+.winrate-overlay.show { display:flex; }
+.winrate-sheet { background:var(--bg2); border-radius:16px 16px 0 0; padding:20px 16px calc(40px + var(--safe-bottom)); width:100%; max-width:420px; max-height:calc(80vh - var(--safe-top)); overflow-y:auto; }
+.winrate-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.winrate-header-cards { display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:700; }
+.winrate-header-cards .wr-vs { color:var(--text-dim); font-weight:400; font-size:0.75rem; }
+.winrate-close { width:28px; height:28px; border:none; background:var(--card-bg); color:var(--text); font-size:0.9rem; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.winrate-level-tabs { display:flex; gap:6px; margin-bottom:14px; }
+.winrate-level-tab { flex:1; padding:8px 4px; border:1.5px solid var(--border); border-radius:8px; background:transparent; color:var(--text-dim); font-size:0.8rem; font-weight:700; cursor:pointer; text-align:center; transition:all 0.15s; }
+.winrate-level-tab.active { border-color:var(--green); color:var(--green); background:rgba(16,185,129,0.1); }
+.winrate-level-tab.skip-tab.active { border-color:var(--text-dim); color:var(--text-dim); background:rgba(156,163,175,0.08); }
+.winrate-stats { margin-bottom:8px; }
+.winrate-stat-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:0.85rem; border-bottom:1px solid rgba(39,39,42,0.4); }
+.winrate-stat-row:last-child { border-bottom:none; }
+.winrate-stat-label { color:var(--text-dim); font-size:0.8rem; }
+.winrate-stat-value { font-weight:700; }
+.winrate-stat-value.positive { color:var(--green); }
+.winrate-stat-value.negative { color:var(--accent); }
+.winrate-split { display:flex; gap:12px; }
+.winrate-split-item { flex:1; text-align:center; }
+.winrate-split-item .wr-split-label { font-size:0.65rem; color:var(--text-dim); margin-bottom:1px; }
+.winrate-split-item .wr-split-val { font-size:0.85rem; font-weight:700; }
+.winrate-scenarios { margin:10px 0; }
+.winrate-sc-title { font-size:0.72rem; color:var(--text-dim); font-weight:700; letter-spacing:0.5px; margin-bottom:6px; text-transform:uppercase; }
+.winrate-sc-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:0.78rem; }
+.winrate-sc-row .wr-sc-label { color:var(--text-dim); flex:1; }
+.winrate-sc-row .wr-sc-val { font-weight:700; min-width:48px; text-align:right; }
+.winrate-sc-row.wr-sc-win .wr-sc-val { color:var(--green); }
+.winrate-sc-row.wr-sc-lose .wr-sc-val { color:var(--accent); }
+.winrate-action { margin-top:14px; }
+.wr-action-btn { width:100%; padding:14px; border:none; border-radius:var(--radius); font-size:1rem; font-weight:700; cursor:pointer; }
+.wr-action-btn.bet { background:linear-gradient(135deg, var(--green), #059669); color:white; box-shadow:0 4px 12px rgba(16,185,129,0.25); }
+.wr-action-btn.skip { background:var(--bg2); color:var(--text-dim); border:1px solid var(--border); }
+
+/* ── 算胜率纯文本按钮 + stake-picker禁用态 ───── */
+.wr-text-btn-row { display:flex; margin-top:20px; padding:0 12px; }
+.wr-text-btn { width:100%; padding:8px; border:none; background:transparent; color:var(--text-dim); font-size:0.8rem; font-weight:600; cursor:pointer; text-align:center; transition:color 0.15s; }
+.wr-text-btn:hover:not(:disabled) { color:var(--green); }
+.wr-text-btn:active:not(:disabled) { opacity:0.7; }
+.wr-text-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+/* stake-picker disabled state */
+.stake-picker[data-no-target] .btn-stake-opt { opacity:0.35; cursor:not-allowed; }
+.stake-picker[data-no-target] .btn-stake-opt:active { transform:none; }
