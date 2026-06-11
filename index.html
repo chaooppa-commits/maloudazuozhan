@@ -724,8 +724,10 @@
 
         // 每个员工独立计算等级差（含降档）
         const tierGap = empTier - bossTier;
-        const is1234 = (empInfo && empInfo.mn === '1234');
-
+        // 顶级组合（原"1234"识别码组：18 27 36 45）：差一档即可出手
+        const _ea = hands[i][0], _eb = hands[i][1];
+        const _eKey = Math.min(_ea, _eb) + ',' + Math.max(_ea, _eb);
+        const is1234 = '1,8 2,7 3,6 4,5'.split(' ').includes(_eKey);
         let stake = 0;
         if (tierGap === 2 || (tierGap === 1 && is1234)) {
           stake = 4;
