@@ -2139,15 +2139,13 @@
         const eH = [...empCards];
         for (let v=1;v<=9;v++) for(let i=0;i<eMs[v-1];i++) eH.push(v);
         const eR = _wrFindDoukou(eH);
-        if(eR){eDk+=eW; const p=_wrCalcPoints(eR.points); if(p===10)e10+=eW;}
-
         const bC={...counts}; for(let v=1;v<=9;v++) bC[v]-=eMs[v-1];
-
         _wrEnumerate(bC, bN, (bMs, bW) => {
           const bH=[...bossCards];
           for(let v=1;v<=9;v++) for(let i=0;i<bMs[v-1];i++) bH.push(v);
           const bR=_wrFindDoukou(bH);
           const w=eW*bW; tot+=w;
+          if(eR){eDk+=w; const p=_wrCalcPoints(eR.points); if(p===10)e10+=w;}
           if(bR){bDk+=w; const p=_wrCalcPoints(bR.points); if(p===10)b10+=w;}
 
           if(eR&&!bR){win+=w;sc.ehbn+=w;if((eR.points[0]+eR.points[1])===10)p2x+=w;}
