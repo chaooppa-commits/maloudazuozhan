@@ -326,6 +326,9 @@ function nextRound() {
     return;
   }
 
+  // 每局重置手动选择，不默认选中任何员工
+  if (typeof manualTarget !== 'undefined') manualTarget = null;
+
   game.hands = dealRound(game.rng);
   game.phase = 'betting';
   game.currentBet = null;
@@ -607,57 +610,57 @@ function getVisible(hand) {
  *   1星: 3348(33 37 46 88) | 479(44 77 99) | 156(19 66 55) — p_eq <42
  */
 const CORRECTED_TABLE = {
-  // 5星（p_eq >= 50）
-  '1,8': { tier: 5, p_eq: 54.3, mn: 77.8, mp: 54.3 },
-  '3,6': { tier: 5, p_eq: 53.5, mn: 76.8, mp: 53.5 },
-  '2,7': { tier: 5, p_eq: 53.3, mn: 77.6, mp: 53.3 },
-  '4,5': { tier: 5, p_eq: 53.3, mn: 77.3, mp: 53.3 },
-  '1,2': { tier: 5, p_eq: 51.0, mn: 70.1, mp: 51.0 },
-  '2,3': { tier: 5, p_eq: 49.7, mn: 70.2, mp: 49.7 },
-  // 4星（p_eq 47–49.6）
-  '1,3': { tier: 4, p_eq: 49.1, mn: 68.0, mp: 49.1 },
-  '2,4': { tier: 4, p_eq: 48.8, mn: 68.4, mp: 48.8 },
-  '7,8': { tier: 4, p_eq: 48.7, mn: 69.9, mp: 48.7 },
-  '3,8': { tier: 4, p_eq: 48.2, mn: 70.9, mp: 48.2 },
-  '2,5': { tier: 4, p_eq: 48.0, mn: 68.3, mp: 48.0 },
-  '5,8': { tier: 4, p_eq: 47.9, mn: 69.7, mp: 47.9 },
-  '6,8': { tier: 4, p_eq: 47.9, mn: 69.4, mp: 47.9 },
-  '3,4': { tier: 4, p_eq: 47.8, mn: 69.0, mp: 47.8 },
-  '1,4': { tier: 4, p_eq: 47.1, mn: 66.0, mp: 47.1 },
-  '4,8': { tier: 4, p_eq: 47.3, mn: 69.3, mp: 47.3 },
+  // T1（5星）
+  '1,8': { tier: 5, p_eq: 50.7, mn: 77.8, mp: 51, mne: '1243' },
+  '3,6': { tier: 5, p_eq: 50.2, mn: 76.8, mp: 50, mne: '1243' },
+  '2,7': { tier: 5, p_eq: 50.4, mn: 77.6, mp: 50, mne: '1243' },
+  '4,5': { tier: 5, p_eq: 50.3, mn: 77.3, mp: 50, mne: '1243' },
+  // T2（4星）
+  '1,2': { tier: 4, p_eq: 45.7, mn: 70.1, mp: 46, mne: '12735' },
+  '2,3': { tier: 4, p_eq: 45.5, mn: 70.2, mp: 46, mne: '12735' },
+  '7,8': { tier: 4, p_eq: 45.3, mn: 69.9, mp: 45, mne: '12735' },
+  '3,8': { tier: 4, p_eq: 45.0, mn: 70.9, mp: 45, mne: '12735' },
+  '5,8': { tier: 4, p_eq: 45.0, mn: 69.7, mp: 45, mne: '12735' },
+  '6,8': { tier: 4, p_eq: 44.7, mn: 69.4, mp: 45, mne: '622' },
+  '2,4': { tier: 4, p_eq: 44.4, mn: 68.4, mp: 44, mne: '622' },
+  '2,5': { tier: 4, p_eq: 44.2, mn: 68.3, mp: 44, mne: '622' },
+  '1,3': { tier: 4, p_eq: 44.2, mn: 68.0, mp: 44, mne: '1384' },
+  '3,4': { tier: 4, p_eq: 44.1, mn: 69.0, mp: 44, mne: '1384' },
+  '8,9': { tier: 4, p_eq: 44.1, mn: 66.6, mp: 44, mne: '1384' },
+  '4,8': { tier: 4, p_eq: 44.0, mn: 69.3, mp: 44, mne: '1384' },
 
-  // 3星（p_eq 45–47.1）
-  '3,5': { tier: 3, p_eq: 47.1, mn: 67.5, mp: 47.1 },
-  '2,6': { tier: 3, p_eq: 46.9, mn: 66.8, mp: 46.9 },
-  '8,9': { tier: 3, p_eq: 46.9, mn: 66.6, mp: 46.9 },
-  '6,7': { tier: 3, p_eq: 46.4, mn: 68.7, mp: 46.4 },
-  '5,7': { tier: 3, p_eq: 45.8, mn: 67.3, mp: 45.8 },
-  '5,6': { tier: 3, p_eq: 45.6, mn: 69.1, mp: 45.6 },
-  '4,7': { tier: 3, p_eq: 45.5, mn: 67.3, mp: 45.5 },
-  '1,5': { tier: 3, p_eq: 45.4, mn: 64.9, mp: 45.4 },
-  '1,1': { tier: 3, p_eq: 45.4, mn: 59.2, mp: 45.4 },
-  '5,9': { tier: 3, p_eq: 45.1, mn: 64.7, mp: 45.1 },
-  '7,9': { tier: 3, p_eq: 45.7, mn: 65.3, mp: 45.7 },
-  '6,9': { tier: 3, p_eq: 44.8, mn: 64.2, mp: 44.8 },
-  // 2星（p_eq 43–45）
-  '4,9': { tier: 2, p_eq: 44.5, mn: 64.8, mp: 44.5 },
-  '3,9': { tier: 2, p_eq: 44.0, mn: 64.6, mp: 44.0 },
-  '1,6': { tier: 2, p_eq: 43.9, mn: 63.8, mp: 43.9 },
-  '1,7': { tier: 2, p_eq: 43.8, mn: 63.6, mp: 43.8 },
-  '2,2': { tier: 2, p_eq: 43.8, mn: 60.2, mp: 43.8 },
-  '2,9': { tier: 2, p_eq: 43.3, mn: 64.9, mp: 43.3 },
-  '2,8': { tier: 2, p_eq: 42.7, mn: 58.1, mp: 42.7 },
-  // 1星（p_eq < 43）
-  '3,3': { tier: 1, p_eq: 41.4, mn: 58.0, mp: 41.4 },
-  '3,7': { tier: 1, p_eq: 41.4, mn: 56.2, mp: 41.4 },
-  '4,6': { tier: 1, p_eq: 41.4, mn: 55.8, mp: 41.4 },
-  '8,8': { tier: 1, p_eq: 39.8, mn: 57.1, mp: 39.8 },
-  '4,4': { tier: 1, p_eq: 38.5, mn: 54.9, mp: 38.5 },
-  '7,7': { tier: 1, p_eq: 38.2, mn: 56.0, mp: 38.2 },
-  '9,9': { tier: 1, p_eq: 37.5, mn: 52.0, mp: 37.5 },
-  '1,9': { tier: 1, p_eq: 37.0, mn: 50.3, mp: 37.0 },
-  '6,6': { tier: 1, p_eq: 36.2, mn: 54.2, mp: 36.2 },
-  '5,5': { tier: 1, p_eq: 30.8, mn: 38.2, mp: 30.8 },
+  // T3（3星）
+  '2,6': { tier: 3, p_eq: 43.7, mn: 66.8, mp: 44, mne: '236' },
+  '3,5': { tier: 3, p_eq: 43.7, mn: 67.5, mp: 44, mne: '236' },
+  '6,7': { tier: 3, p_eq: 43.4, mn: 68.7, mp: 43, mne: '236' },
+  '5,6': { tier: 3, p_eq: 42.9, mn: 69.1, mp: 43, mne: '51574' },
+  '1,4': { tier: 3, p_eq: 42.6, mn: 66.0, mp: 43, mne: '51574' },
+  '5,7': { tier: 3, p_eq: 42.6, mn: 67.3, mp: 43, mne: '51574' },
+  '7,9': { tier: 3, p_eq: 42.6, mn: 65.3, mp: 43, mne: '51574' },
+  '4,7': { tier: 3, p_eq: 42.4, mn: 67.3, mp: 42, mne: '51574' },
+  '1,5': { tier: 3, p_eq: 41.6, mn: 64.9, mp: 42, mne: '156' },
+  '5,9': { tier: 3, p_eq: 41.5, mn: 64.7, mp: 42, mne: '156' },
+  '6,9': { tier: 3, p_eq: 41.4, mn: 64.2, mp: 41, mne: '156' },
+  // T4（2星）
+  '1,6': { tier: 2, p_eq: 40.9, mn: 63.8, mp: 41, mne: '1413' },
+  '4,9': { tier: 2, p_eq: 40.8, mn: 64.8, mp: 41, mne: '1413' },
+  '1,7': { tier: 2, p_eq: 40.6, mn: 63.6, mp: 41, mne: '1413' },
+  '3,9': { tier: 2, p_eq: 40.6, mn: 64.6, mp: 41, mne: '1413' },
+  '2,9': { tier: 2, p_eq: 39.6, mn: 64.9, mp: 40, mne: '2122' },
+  '1,1': { tier: 2, p_eq: 39.4, mn: 59.2, mp: 39, mne: '2122' },
+  '2,2': { tier: 2, p_eq: 39.0, mn: 60.2, mp: 39, mne: '2122' },
+  '2,8': { tier: 2, p_eq: 38.7, mn: 58.1, mp: 39, mne: '2122' },
+  // T5（1星）
+  '3,3': { tier: 1, p_eq: 37.9, mn: 58.0, mp: 38, mne: '3834' },
+  '8,8': { tier: 1, p_eq: 37.4, mn: 57.1, mp: 37, mne: '3834' },
+  '3,7': { tier: 1, p_eq: 37.0, mn: 56.2, mp: 37, mne: '3834' },
+  '4,6': { tier: 1, p_eq: 36.9, mn: 55.8, mp: 37, mne: '3834' },
+  '4,4': { tier: 1, p_eq: 36.0, mn: 54.9, mp: 36, mne: '479' },
+  '7,7': { tier: 1, p_eq: 35.6, mn: 56.0, mp: 36, mne: '479' },
+  '9,9': { tier: 1, p_eq: 34.6, mn: 52.0, mp: 35, mne: '479' },
+  '6,6': { tier: 1, p_eq: 34.2, mn: 54.2, mp: 34, mne: '615' },
+  '1,9': { tier: 1, p_eq: 32.6, mn: 50.3, mp: 33, mne: '615' },
+  '5,5': { tier: 1, p_eq: 26.4, mn: 38.2, mp: 26, mne: '615' },
 };
 
 /**
@@ -676,6 +679,25 @@ function lookupTier(a, b) {
 // 星级标签文本
 const TIER_LABEL = { 5: 'T1', 4: 'T2', 3: 'T3', 2: 'T4', 1: 'T5' };
 
+// ═══════════════════════════════════════════════════════
+// MNEMONIC Strategy — 口诀规则基础表
+// 格式: empMn|bossMn → stake
+// ═══════════════════════════════════════════════════════
+const MNEMONIC_BASE_RULES = {
+  '1243|615': 16,  '1243|479': 16,  '1243|3834': 16,
+  '1243|2122': 16, '1243|1413': 12, '1243|156': 12,
+  '1243|51574': 12,'1243|236': 8,   '1243|1384': 8,
+  '1243|622': 8,   '1243|12735': 8,
+  '12735|615': 12, '12735|479': 8,  '12735|3834': 4,
+  '12735|2122': 4, '12735|1413': 4,
+  '622|615': 8,    '622|479': 8,    '622|3834': 4,   '622|2122': 4,
+  '1384|615': 8,   '1384|479': 4,   '1384|3834': 4,  '1384|2122': 4,
+  '236|615': 8,    '236|479': 4,    '236|3834': 4,
+  '51574|615': 4,  '51574|479': 4,
+  '156|615': 4,
+  '1413|615': 4,
+};
+
 // 推荐注码：2档差┩4, 3档差┩8, 4档差┩12, 4档差特殊┩16
 const STAKE_FOR_GAP = { 2: 4, 3: 8, 4: 12 };
 
@@ -686,6 +708,24 @@ function getPlayerPower(hand) {
   return lookupTier(v[0], v[1]);
 }
 
+/**
+ * 计算某手牌的福星卡总消耗（加权）
+ */
+function _calcBlessConsumed(a, b, allVisible) {
+  const blessings = blessingCards(a, b, []);
+  let total = 0;
+  for (const bl of blessings) {
+    const x = bl.value;
+    let used = allVisible.filter(c => c === x).length;
+    if (a === x) used--;
+    if (b === x) used--;
+    if (used < 0) used = 0;
+    const weight = (x === 1) ? 0.5 : 1;
+    total += used * weight;
+  }
+  return total;
+}
+
 function evaluateAction(hands, betTarget, betAmount) {
   const bossInfo = getPlayerPower(hands[0]);
   const empInfos = {
@@ -694,77 +734,96 @@ function evaluateAction(hands, betTarget, betAmount) {
     C: getPlayerPower(hands[3])
   };
 
-  const bossTier = bossInfo ? bossInfo.tier : 3;
-  const bossRate = bossInfo ? bossInfo.p_eq : 45;
+  const allVisible = [];
+  for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
 
-  // 计算每个员工vs老板的战力差
+  const bossMn = bossInfo ? bossInfo.mne : null;
+  const bossRate = bossInfo ? bossInfo.p_eq : 45;
+  const bossBless = _calcBlessConsumed(hands[0][0], hands[0][1], allVisible);
+
+  // 计算每个员工的 MNEMONIC 推荐注码与胜率差
   const gaps = {};
   for (const lbl of ['A', 'B', 'C']) {
     const info = empInfos[lbl];
+    const idx = { A: 1, B: 2, C: 3 }[lbl];
+    const empBless = _calcBlessConsumed(hands[idx][0], hands[idx][1], allVisible);
+    const blessDiff = bossBless - empBless; // 正=员工消耗少于老板，负=员工消耗多于老板
+
     if (info) {
+      const ruleKey = info.mne + '|' + (bossMn || '');
+      const recStake = MNEMONIC_BASE_RULES[ruleKey];
       gaps[lbl] = {
-        rateDiff: info.p_eq - bossRate,
-        tierDiff: info.tier - bossTier,
-        tier: info.tier,
-        rate: info.p_eq
+        mn: info.mne,
+        rate: info.p_eq,
+        recStake: recStake, // undefined if no rule
+        blessDiff: blessDiff,
+        mp: info.p_eq
       };
     } else {
-      gaps[lbl] = { rateDiff: 0, tierDiff: 0, tier: 3, rate: 45 };
+      gaps[lbl] = { mn: '?', rate: 45, recStake: undefined, blessDiff: blessDiff, mp: 40 };
     }
   }
 
-  // 找最佳员工（最高等效胜率）
+  // 找最佳员工（MNEMONIC规则：最高推荐注码，相同时选更高战力mp）
   let bestLbl = null;
-  let bestGap = -999;
+  let bestRec = -1;
+  let bestMp = -999;
   for (const lbl of ['A', 'B', 'C']) {
-    const g = gaps[lbl].rateDiff;
-    if (g > bestGap) { bestGap = g; bestLbl = lbl; }
+    const g = gaps[lbl];
+    const rec = g.recStake || 0;
+    const mp = g.mp;
+    if (rec > bestRec || (rec === bestRec && mp > bestMp)) {
+      bestRec = rec; bestLbl = lbl; bestMp = mp;
+    }
   }
 
   // 如果下注，用选中员工；如果 SKIP，用最佳员工作参考
   const evalLbl = (betTarget === 'SKIP') ? (bestLbl || 'A') : betTarget;
   const sel = gaps[evalLbl];
 
-  // 构建显示字符串: "X星-Y星=Z档；M%-N%=±D%；投N或pass"
-  function buildDetail(empTier, empRate, bossTierV, bossRateV, gapDiff, rateDiff, stakeStr) {
-    const gap = gapDiff >= 0 ? gapDiff : 0;
-    const rateD = (rateDiff >= 0 ? '+' : '') + rateDiff.toFixed(0) + '%';
-    // 格式: "5-2=3星；50%-40%=+10%；挂5或pass"
-    return `${empTier}-${bossTierV}=${gap}星；${empRate.toFixed(0)}%-${bossRateV.toFixed(0)}%=${rateD}；${stakeStr}`;
+  // 构建福星卡差值字符串
+  const bcStr = sel.blessDiff >= 0
+    ? `BC+${sel.blessDiff.toFixed(sel.blessDiff % 1 === 0 ? 0 : 1)}`
+    : `BC${sel.blessDiff.toFixed(Math.abs(sel.blessDiff) % 1 === 0 ? 0 : 1)}`;
+
+  // 构建显示字符串: "口诀 胜率 VS 口诀 胜率 - BC±X - 下X - 评价"
+  function buildDetail(empMn, empRate, bossMnV, bossRateV, bc, stakeStr) {
+    return `${empMn} ${empRate.toFixed(0)} VS ${bossMnV} ${bossRateV.toFixed(0)} - ${bc} - ${stakeStr}`;
   }
 
   // ——— SKIP ———
   if (betTarget === 'SKIP') {
-    // 以最佳员工作为参考评估
-    const stakeStr = 'pass';
-    const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
-    // 等级差 < 2：pass 理性；等级差 >= 2：pass 龟缩（有好机会没出手）
-    const tag = sel.tierDiff >= 2 ? '龟缩' : '理性';
+    const d = buildDetail(sel.mn, sel.rate, bossMn || '?', bossRate, bcStr, '下0');
+    // 最佳员工有推荐注码却SKIP → 龟缩；否则理性
+    const hasOpportunity = (gaps[evalLbl].recStake !== undefined && gaps[evalLbl].recStake > 0);
+    const tag = hasOpportunity ? '龟缩' : '理性';
     return { tag, detail: d };
   }
 
   // ——— 下注 ———
-  // 推荐注码：gap=2→4, gap=3→8, gap=4→12, gap>=5→16, gap<=1→4
-  const recStake = STAKE_FOR_GAP[sel.tierDiff] || (sel.tierDiff >= 4 ? 12 : 4);
-  const stakeStr = `投${betAmount}`;
-  const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
+  const recStake = sel.recStake;
+  const stakeStr = `下${betAmount}`;
+  const d = buildDetail(sel.mn, sel.rate, bossMn || '?', bossRate, bcStr, stakeStr);
 
-  // 冒进：战力不占优（tier差<=0）还投注
-  if (sel.tierDiff <= 0) {
+  // 无规则却下注 → 冒进
+  if (recStake === undefined) {
     return { tag: '冒进', detail: d };
   }
 
-  // 注码与战力差的匹配判断
+  // 战力不占优（推荐注码<=0）还投注 → 冒进
+  if (recStake <= 0) {
+    return { tag: '冒进', detail: d };
+  }
+
+  // 注码匹配判断
   if (betAmount > recStake) {
-    // 小差投大注 → 冒进
     return { tag: '冒进', detail: d };
   }
   if (betAmount < recStake) {
-    // 大差投小注 → 保守
     return { tag: '保守', detail: d };
   }
 
-  // 投注匹配战力差 → 理性
+  // 投注匹配规则 → 理性
   return { tag: '理性', detail: d };
 }
 
